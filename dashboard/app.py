@@ -321,6 +321,37 @@ def main():
                         title="Local vs Foráneo", hole=0.4,
                         color_discrete_sequence=[COLORS['primary'], COLORS['secondary']])
             st.plotly_chart(fig, use_container_width=True)
+        
+        # SLA by Category breakdown
+        st.subheader("📊 SLA por Categoría de Servicio")
+        
+        def categorize_service(t):
+            t = str(t).upper()
+            if 'AUXILIO' in t: return 'Auxilio Vial'
+            if 'REMOLQUE' in t or 'GRUA' in t: return 'Grúas (Remolque)'
+            if 'LEGAL' in t or 'SITU' in t: return 'Legal / In Situ'
+            return 'Otros'
+        
+        df_cat = df.copy()
+        df_cat['categoria'] = df_cat['tipo_de_servicio'].apply(categorize_service)
+        
+        # Calculate SLA per category
+        sla_by_cat = []
+        for cat in ['Auxilio Vial', 'Grúas (Remolque)', 'Legal / In Situ', 'Otros']:
+            mask = (df_cat['categoria'] == cat) & (df_cat['status_del_servicio'].str.contains('Concluido', case=False, na=False))
+            sub = df_cat[mask]
+            if len(sub) > 0 and 'duracion_minutos' in sub.columns:
+                dur = sub['duracion_minutos']
+                origen = sub['origen_del_servicio'].str.upper()
+                limite = origen.apply(lambda x: 90 if 'FORAN' in str(x) else 45)
+                cumple = (dur <= limite) & dur.notnull()
+                sla_pct = cumple.mean() * 100
+                status = '🟢' if sla_pct >= 85 else ('🟠' if sla_pct >= 70 else '🔴')
+                sla_by_cat.append({'Categoría': cat, 'Volumen': len(sub), 'SLA': f"{sla_pct:.1f}%", 'Estado': status})
+            else:
+                sla_by_cat.append({'Categoría': cat, 'Volumen': len(sub), 'SLA': 'N/A', 'Estado': '⚪'})
+        
+        st.dataframe(pd.DataFrame(sla_by_cat), use_container_width=True, hide_index=True)
     
     # ==========================================================================
     # HISTÓRICO COORDINACIÓN
