@@ -140,20 +140,29 @@ def main():
     st.sidebar.divider()
     st.sidebar.subheader("🗓️ Filtros")
     
-    # Get unique months
+    # Get unique months and sort them properly
     all_months = sorted(df['mes'].dropna().unique().tolist())
-    selected_months = st.sidebar.multiselect(
-        "Seleccionar Mes(es)",
-        options=all_months,
-        default=all_months,
-        help="Filtra los datos por mes"
-    )
+    
+    # Select All checkbox
+    select_all = st.sidebar.checkbox("Seleccionar todos los meses", value=True)
+    
+    if select_all:
+        selected_months = all_months
+    else:
+        selected_months = st.sidebar.multiselect(
+            "Meses:",
+            options=all_months,
+            default=[],
+            placeholder="Elige uno o más meses..."
+        )
     
     # Apply filter
     if selected_months:
         df = df[df['mes'].isin(selected_months)]
         # Recalculate metrics with filtered data
         metrics = calculate_metrics(df)
+    else:
+        st.sidebar.warning("⚠️ Selecciona al menos un mes")
     
     st.sidebar.caption(f"📊 {len(df):,} registros seleccionados")
     
