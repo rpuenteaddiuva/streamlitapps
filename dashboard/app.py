@@ -72,81 +72,66 @@ st.markdown("""
         background: var(--bg-card);
         border: 1px solid var(--border);
         border-radius: 12px;
-        padding: 1.25rem !important;
-        transition: transform 0.15s ease, box-shadow 0.15s ease;
+        padding: 1.5rem;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        transition: transform 0.2s ease, border-color 0.2s ease;
     }
     
-    [data-testid="stMetric"]:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 6px 24px rgba(0, 0, 0, 0.4);
+    .metric-card:hover {
+        transform: translateY(-2px);
+        border-color: var(--accent);
     }
     
+    [data-testid="stMetricValue"] {
+        color: var(--text-primary) !important;
+        font-weight: 700;
+        font-size: 1.8rem !important;
+    }
+
     [data-testid="stMetricLabel"] {
-        font-weight: 500;
-        font-size: 0.85rem;
         color: var(--text-secondary) !important;
+        font-size: 0.9rem !important;
         text-transform: uppercase;
         letter-spacing: 0.5px;
     }
     
-    [data-testid="stMetricValue"] {
-        font-size: 2rem !important;
-        font-weight: 700;
-        color: var(--text-primary) !important;
-    }
-    
-    [data-testid="stMetricDelta"] {
-        font-size: 0.9rem;
+    /* ===== SECTION HEADERS ===== */
+    .section-header {
+        margin-top: 2rem;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid var(--border);
+        color: var(--accent) !important;
     }
     
     /* ===== SIDEBAR ===== */
     [data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #0a1929 0%, #0d2137 100%);
+        background-color: #0b0d10;
         border-right: 1px solid var(--border);
     }
     
-    [data-testid="stSidebar"] .stMarkdown,
-    [data-testid="stSidebar"] label,
-    [data-testid="stSidebar"] p {
-        color: var(--text-primary) !important;
+    .css-1d391kg {  /* Sidebar sections */
+        padding-top: 2rem;
+    }
+
+    /* ===== DATAFRAMES ===== */
+    .stDataFrame {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        overflow: hidden;
     }
     
-    [data-testid="stSidebar"] h1, 
-    [data-testid="stSidebar"] h2, 
-    [data-testid="stSidebar"] h3 {
-        color: var(--accent) !important;
-        font-weight: 600;
-    }
-    
-    /* ===== FILE UPLOADER ===== */
-    .stFileUploader {
-        background: var(--bg-card);
+    /* ===== CUSTOM FILE UPLOADER ===== */
+    [data-testid="stFileUploader"] {
         border: 1px dashed var(--border);
         border-radius: 10px;
         padding: 1rem;
+        background: rgba(255,255,255,0.02);
     }
     
-    .stFileUploader:hover {
+    [data-testid="stFileUploader"]:hover {
         border-color: var(--accent);
-    }
-    
-    /* ===== DATAFRAMES / TABLES ===== */
-    .stDataFrame {
-        border-radius: 10px;
-        overflow: hidden;
-        border: 1px solid var(--border);
-    }
-    
-    .stDataFrame [data-testid="stDataFrameResizable"] {
-        background: var(--bg-card);
-    }
-    
-    /* ===== SELECTBOXES & INPUTS ===== */
-    .stSelectbox > div > div,
-    .stMultiSelect > div > div {
-        background: var(--bg-card);
-        border-color: var(--border);
-        color: var(--text-primary);
+        background: rgba(31, 142, 241, 0.05);
     }
     
     /* ===== BUTTONS ===== */
