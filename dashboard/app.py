@@ -329,26 +329,64 @@ def calculate_metrics(_df):
 
     return metrics
 
+@st.cache_data
+def preprocess_data(df):
+    """Ensure critical columns exist for analysis"""
+    # Standardize column names
+    df.columns = df.columns.astype(str).str.strip().str.lower().str.replace(' ', '_').str.replace('.', '')
+    
+    # 1. Calculate 'duracion_minutos' if missing but timestamps exist
+    # Candidates for Start/End
+    start_cols = [c for c in df.columns if 'contacto' in c and 'fec' in c] # fec_contacto
+    end_cols = [c for c in df.columns if 'asignacion' in c and 'fec' in c] # fec_asignacion
+    
+    if 'duracion_minutos' not in df.columns and start_cols and end_cols:
+        try:
+            start = pd.to_datetime(df[start_cols[0]], errors='coerce')
+            end = pd.to_datetime(df[end_cols[0]], errors='coerce')
+            df['duracion_minutos'] = (end - start).dt.total_seconds() / 60
+        except:
+            pass
+            
+    # 2. Extract 'mes' (e.g., 'Oct-25') if missing but date exists
+    if 'mes' not in df.columns and start_cols:
+        try:
+            # Create Spanish month names
+            months_es = {1: 'Ene', 2: 'Feb', 3: 'Mar', 4: 'Abr', 5: 'May', 6: 'Jun',
+                         7: 'Jul', 8: 'Ago', 9: 'Sep', 10: 'Oct', 11: 'Nov', 12: 'Dic'}
+            dates = pd.to_datetime(df[start_cols[0]], errors='coerce')
+            df['mes'] = dates.apply(lambda x: f"{months_es.get(x.month, '')}-{str(x.year)[-2:]}" if pd.notnull(x) else 'N/A')
+        except:
+            pass
+            
+    return df
+
 def main():
-    # Header
-    st.markdown('<h1 class="main-header">📊 Boletín de Calidad ADS</h1>', unsafe_allow_html=True)
+    st.set_page_config(page_title="Boletín de Calidad ADS", layout="wide", page_icon="📊")
+    load_css()
     
-    # Sidebar - Data Source
-    st.sidebar.title("🔧 Panel de Control")
+    # Sidebar Logo
+    st.sidebar.markdown("""
+        <div style="text-align: center; margin-bottom: 20px;">
+            <h2 style="color: #1f8ef1;">ADS Dashboard</h2>
+        </div>
+    """, unsafe_allow_html=True)
     
-    # File uploader
-    st.sidebar.subheader("📂 Fuente de Datos")
-    uploaded_file = st.sidebar.file_uploader("Cargar Excel/CSV", type=["xlsx", "csv"])
+    # File Uploader
+    uploaded_file = st.sidebar.file_uploader(
+        "📂 Cargar BBDD (Excel)",
+        type=["xlsx"],
+        help="Carga un archivo Excel. Se calcularán automáticamente SLA y Fechas si faltan."
+    )
     
     if uploaded_file:
-        # Load from uploaded file
-        if uploaded_file.name.endswith('.csv'):
-            df = pd.read_csv(uploaded_file, encoding='latin1')
-        else:
+        try:
             df = pd.read_excel(uploaded_file)
-        # Standardize column names
-        df.columns = df.columns.str.strip().str.lower().str.replace(' ', '_').str.replace('.', '')
-        st.sidebar.success(f"✅ {uploaded_file.name}")
+            df = preprocess_data(df) # Auto-fix columns
+            st.sidebar.success(f"✅ Cargado: {uploaded_file.name}")
+        except Exception as e:
+            st.sidebar.error(f"Error: {e}")
+            return
     else:
         # Load from local file
         df = load_data()
@@ -356,6 +394,7 @@ def main():
             st.info("👋 **Bienvenido!** Sube un archivo Excel (BBDD) en el panel lateral para comenzar.")
             st.sidebar.info("Arrastra tu archivo aquí ↑")
             return
+        df = preprocess_data(df) # Ensure consistency for local file too
         st.sidebar.caption("📁 Usando datos locales")
     
     # Sidebar
