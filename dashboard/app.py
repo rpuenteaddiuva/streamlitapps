@@ -253,9 +253,9 @@ def load_data():
     return None
 
 @st.cache_data
-def calculate_metrics(_df):
+def calculate_metrics(df_in):
     """Calcula KPIs optimizados con operaciones vectorizadas"""
-    df = _df  # Workaround for unhashable df
+    df = df_in
     metrics = {}
     
     # 1. Total Servicios
