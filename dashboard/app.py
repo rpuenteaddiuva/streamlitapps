@@ -718,7 +718,7 @@ def main():
         # 1. Prepare Columns Structure (Months + Quarterly Avgs)
         columns_struct = [
             'INDICADOR', 'PUNTO DE CONTROL',
-            'Ene-25', 'Feb-25', 'Mar-25', 'PROMEDIO 1re. TRIMESTRE',
+            'Ene-25', 'Feb-25', 'Mar-25', 'PROMEDIO 1er. TRIMESTRE',
             'Abr-25', 'May-25', 'Jun-25', 'PROMEDIO 2do. TRIMESTRE',
             'Jul-25', 'Ago-25', 'Sep-25', 'PROMEDIO 3er. TRIMESTRE',
             'Oct-25'
@@ -857,8 +857,12 @@ def main():
                      return 'color: black' # Ensure readable if styled row
             return ''
 
-        st.dataframe(df_table.style.applymap(style_table),
-                     use_container_width=True, hide_index=True)
+        try:
+            st.dataframe(df_table.style.applymap(style_table),
+                        use_container_width=True, hide_index=True)
+        except Exception as e:
+            st.error(f"Error renderizando estilos: {e}")
+            st.dataframe(df_table, use_container_width=True, hide_index=True)
         
         st.caption("Nota: Los valores de Coordinación, NS, Abandono y Recobros son simulados o externos a la BBDD actual.")
     
