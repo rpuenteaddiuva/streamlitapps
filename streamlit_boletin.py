@@ -55,9 +55,18 @@ COLORS = {
 @st.cache_data
 def load_data():
     """Load and cache the analyzed data"""
-    path = os.path.join("resultados", "analyzed_bbdd.xlsx")
+    # Get the directory where this script is located
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    path = os.path.join(script_dir, "resultados", "analyzed_bbdd.xlsx")
+    
     if os.path.exists(path):
         return pd.read_excel(path)
+    
+    # Fallback: try relative path
+    fallback_path = os.path.join("resultados", "analyzed_bbdd.xlsx")
+    if os.path.exists(fallback_path):
+        return pd.read_excel(fallback_path)
+    
     return None
 
 def calculate_metrics(df):
