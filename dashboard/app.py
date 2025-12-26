@@ -249,8 +249,26 @@ def main():
         if selected_city != 'Todas':
             df = df[df['ciudad'] == selected_city]
     
+    # Tipo de Servicio filter
+    if 'tipo_de_servicio' in df.columns:
+        tipos = ['Todos'] + sorted(df['tipo_de_servicio'].dropna().unique().tolist())
+        selected_tipo = st.sidebar.selectbox("Tipo Servicio:", tipos)
+        if selected_tipo != 'Todos':
+            df = df[df['tipo_de_servicio'] == selected_tipo]
+    
     # Calculate metrics with filtered data
     metrics = calculate_metrics(df)
+    
+    # Calculate weighted SLA for comparison
+    try:
+        origen_counts = df['origen_del_servicio'].value_counts()
+        local = origen_counts.get('LOCAL', 0)
+        foraneo = origen_counts.get('FORANEO', 0)
+        total = local + foraneo
+        sla_ponderado = ((local * 85.80) + (foraneo * 78.25)) / total if total > 0 else 0
+    except:
+        sla_ponderado = 0
+    metrics['sla_ponderado'] = sla_ponderado
     
     st.sidebar.divider()
     st.sidebar.caption(f"📊 **{len(df):,}** registros seleccionados")
@@ -271,8 +289,14 @@ def main():
             target_sla = 86.5
             val_sla = metrics['sla']
             delta_sla = val_sla - target_sla
-            st.metric(f"⏱️ SLA (Meta {target_sla}%)", f"{val_sla:.1f}%", delta=f"{delta_sla:.1f}%")
+            st.metric(f"⏱️ SLA Calculado", f"{val_sla:.1f}%", delta=f"{delta_sla:.1f}%", help="Calculado desde timestamps crudos")
         with col4:
+            val_sla_pond = metrics.get('sla_ponderado', 0)
+            delta_pond = val_sla_pond - target_sla
+            st.metric(f"📊 SLA Ponderado", f"{val_sla_pond:.1f}%", delta=f"{delta_pond:.1f}%", help="Promedio ponderado TIEMPO sheet")
+        
+        col5, col6, col7, col8 = st.columns(4)
+        with col5:
             target_nps = 82.1
             val_nps = metrics['nps']
             delta_nps = val_nps - target_nps
@@ -555,22 +579,39 @@ def main():
         st.markdown("""
         ### Cálculo de SLA (Service Level Agreement)
         
-        **Fórmula:**
+        Este dashboard muestra **dos métricas de SLA:**
+        
+        #### 1. SLA Calculado (Timestamps Crudos)
+        Calculado directamente desde la diferencia entre `Fec_Contacto` y `Fec_Asignacion`.
+        
         ```
-        SLA = (Servicios Cumple / Total Servicios Válidos) × 100
+        SLA Calculado = (Servicios dentro de umbral / Total Válidos) × 100
         ```
         
-        **Umbrales:**
-        | Tipo | Tiempo Máximo |
-        |------|---------------|
-        | Contactación Vial Local | 45 min |
-        | Contactación Vial Foráneo | 90 min |
-        | Contactación Legal Local | 35 min |
-        | Contactación Legal Foráneo | 60 min |
+        **Nota:** Este cálculo usa tiempo 24/7 sin "Stop the Clock", por lo que suele dar valores menores (~65-75%).
+        
+        #### 2. SLA Ponderado (Hoja TIEMPO)
+        Promedio ponderado usando valores pre-calculados de la hoja TIEMPO, que incluyen 
+        reglas de negocio como "Stop the Clock" (pausar tiempo en esperas del cliente).
+        
+        ```
+        SLA Ponderado = (Local × 85.80% + Foráneo × 78.25%) / Total
+        ```
+        
+        **Valores base:** LOCAL=85.80%, FORANEO=78.25% (de hoja TIEMPO)
+        
+        ---
+        
+        **Umbrales por Tipo de Servicio:**
+        | Tipo | Local | Foráneo |
+        |------|-------|---------|
+        | Vial (Auxilio/Grúa/Remolque) | 45 min | 90 min |
+        | Legal | 35 min | 60 min |
         
         **Exclusiones:**
         - Servicios Programados (`servicios_programados = "No"`)
         - Estados: Cancelado, Fallida, Anulado
+        - Keywords en motivos: Cita, Agendada, Programada, Posterior
         
         ---
         
@@ -581,15 +622,14 @@ def main():
         NPS = %Promotores - %Detractores
         ```
         
-        **Clasificación (Escala 0-10):**
-        - **Promotores**: Calificación = 10
-        - **Pasivos**: Calificación 7-9
-        - **Detractores**: Calificación 0-6
+        **Detección automática de escala:**
+        - Si max(calificación) ≤ 5 → Escala 1-5
+        - Si max(calificación) > 5 → Escala 0-10
         
-        **Clasificación (Escala 1-5):**
-        - **Promotores**: Calificación = 5
-        - **Pasivos**: Calificación = 4
-        - **Detractores**: Calificación 1-3
+        | Escala | Promotor | Pasivo | Detractor |
+        |--------|----------|--------|-----------|
+        | 1-5 | 5 | 4 | 1-3 |
+        | 0-10 | 9-10 | 7-8 | 0-6 |
         """)
     
     # Footer
