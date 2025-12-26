@@ -94,25 +94,25 @@ def calculate_metrics(df):
     except:
         metrics['sla'] = 82.71
     
-    # 3. NPS - Estándar de Auditoría V3
+    # 3. NPS - Lógica exacta de Auditoría V3 (ads_reporting.py)
     nps_col = next((c for c in df.columns if 'nps' in c.lower() and 'calificacion' in c.lower()), None)
     metrics['nps'] = 0
     
     if nps_col:
         nps_data = pd.to_numeric(df[nps_col], errors='coerce').dropna()
         if len(nps_data) > 0:
-            max_val = nps_data.max()
-            if max_val <= 5:
-                # Escala 1-5: 5=Promotor, 4=Pasivo, 1-3=Detractor
-                prom = len(nps_data[nps_data == 5])
-                det = len(nps_data[nps_data <= 3])
-            else:
-                # Escala 0-10: 10=Promotor, 7-9=Pasivo, 0-6=Detractor
-                prom = len(nps_data[nps_data == 10])
-                det = len(nps_data[nps_data <= 6])
+            # Categorización híbrida (escala mixta 1-5 y 0-10)
+            def categorize_nps(val):
+                if val == 10: return 'PROMOTOR'  # 10 en escala 0-10
+                if val >= 7: return 'PASIVO'      # 7-9 en escala 0-10
+                if val == 5: return 'PROMOTOR'   # 5 en escala 1-5
+                if val == 4: return 'PASIVO'     # 4 en escala 1-5
+                return 'DETRACTOR'
             
-            metrics['nps'] = ((prom - det) / len(nps_data)) * 100
-
+            categorias = nps_data.apply(categorize_nps)
+            prom = (categorias == 'PROMOTOR').sum() / len(categorias)
+            det = (categorias == 'DETRACTOR').sum() / len(categorias)
+            metrics['nps'] = (prom - det) * 100
 
     return metrics
 
