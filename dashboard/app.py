@@ -402,16 +402,7 @@ def main():
             placeholder="Elige uno o más meses..."
         )
     
-    # Save unfiltered DF for historical analysis
-    df_unfiltered = df.copy()
-    
-    # Apply month filter
-    if selected_months:
-        df = df[df['mes'].isin(selected_months)]
-    else:
-        st.sidebar.warning("⚠️ Selecciona al menos un mes")
-    
-    # Drill-down filters
+    # --- APPLY CONTEXT FILTERS FIRST (Affects both Current View and History) ---
     st.sidebar.divider()
     st.sidebar.subheader("🔍 Drill-Down")
     
@@ -442,7 +433,6 @@ def main():
                                       help="Excluye servicios Médicos, Hogar, etc. del cálculo de SLA")
                                       
     if exclude_otros:
-        # Define logic for 'Otros' same as categorization
         def is_otros(t):
             t = str(t).upper()
             if 'AUXILIO' in t or 'REMOLQUE' in t or 'GRUA' in t or 'LEGAL' in t or 'SITU' in t:
@@ -454,6 +444,15 @@ def main():
         df = df[~mask_otros]
         if df_excluded_count > 0:
             st.sidebar.caption(f"ℹ️ Se han filtrado {df_excluded_count} servicios 'Otros'")
+
+    # --- CAPTURE HISTORY (Context filtered, but ALL months) ---
+    df_unfiltered = df.copy()
+
+    # --- APPLY TIME FILTER (Only selected months) ---
+    if selected_months:
+        df = df[df['mes'].isin(selected_months)]
+    else:
+        st.sidebar.warning("⚠️ Selecciona al menos un mes")
             
     # Disclaimer about Stop the Clock
     st.sidebar.info("ℹ️ **Nota:** El cálculo de SLA es estricto (tiempo total) ya que la base de datos no contiene registros de 'tiempos muertos' imputables al cliente.")
