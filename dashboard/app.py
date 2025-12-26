@@ -445,34 +445,41 @@ def main():
         if selected_city != 'Todas':
             df = df[df['ciudad'] == selected_city]
     
-    # Tipo de Servicio filter
-    if 'tipo_de_servicio' in df.columns:
-        tipos = ['Todos'] + sorted(df['tipo_de_servicio'].dropna().unique().tolist())
-        selected_tipo = st.sidebar.selectbox("Tipo Servicio:", tipos)
-        if selected_tipo != 'Todos':
-            df = df[df['tipo_de_servicio'] == selected_tipo]
-            
-    # Exclude 'Otros' toggle
+    # Exclude 'Otros' toggle (Granular Control)
     st.sidebar.divider()
-    exclude_otros = st.sidebar.checkbox("⚠️ Excluir categoría 'Otros'", value=True, 
-                                      help="Excluye servicios Médicos, Hogar, etc. del cálculo de SLA")
-                                      
-    if exclude_otros:
-        def is_otros(t):
-            t = str(t).upper()
-            if 'AUXILIO' in t or 'REMOLQUE' in t or 'GRUA' in t or 'LEGAL' in t or 'SITU' in t:
-                return False
-            return True
+    
+    # 1. Identify all types and default 'others'
+    all_service_types = sorted(df['tipo_de_servicio'].astype(str).unique().tolist())
+    
+    def is_definitely_otros(t):
+        t = str(t).upper()
+        # Core keywords to KEEP
+        if 'AUXILIO' in t or 'REMOLQUE' in t or 'GRUA' in t or 'LEGAL' in t or 'SITU' in t:
+            return False
+        return True # Default exclude
         
-        mask_otros = df['tipo_de_servicio'].apply(is_otros)
-        excluded_types = df[mask_otros]['tipo_de_servicio'].unique().tolist()
-        df_excluded_count = mask_otros.sum()
-        df = df[~mask_otros]
+    default_excluded = [t for t in all_service_types if is_definitely_otros(t)]
+    
+    # 2. Multiselect Widget
+    with st.sidebar.expander("🚫 Gestión de Exclusiones", expanded=False):
+        st.caption("Selecciona los servicios que NO deseas incluir en el análisis (SLA, NPS, etc).")
+        types_to_exclude = st.multiselect(
+            "Servicios Excluidos:",
+            options=all_service_types,
+            default=default_excluded,
+            placeholder="Selecciona servicios a excluir..."
+        )
         
-        if df_excluded_count > 0:
-            st.sidebar.caption(f"ℹ️ Se han filtrado {df_excluded_count} servicios calculados como 'Otros'")
-            with st.sidebar.expander("Ver categorías excluidas"):
-                st.write(sorted([str(x) for x in excluded_types]))
+    # 3. Apply Exclusion Filter
+    if types_to_exclude:
+        mask_exclude = df['tipo_de_servicio'].isin(types_to_exclude)
+        count_excluded = mask_exclude.sum()
+        df = df[~mask_exclude]
+        
+        if count_excluded > 0:
+            st.sidebar.warning(f"⚠️ Se han excluido {count_excluded} servicios del análisis.")
+    else:
+        st.sidebar.success("✅ Se están mostrando TODOS los servicios.")
 
     # --- CAPTURE HISTORY (Context filtered, but ALL months) ---
     df_unfiltered = df.copy()
