@@ -171,17 +171,26 @@ COLORS = {
 @st.cache_data
 def load_data():
     """Load and cache the analyzed data"""
-    # Get the directory where this script is located
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    path = os.path.join(script_dir, "resultados", "analyzed_bbdd.xlsx")
     
-    if os.path.exists(path):
-        return pd.read_excel(path)
+    # Try multiple paths (local dev, Streamlit Cloud, parent dir)
+    paths_to_try = [
+        os.path.join(script_dir, "resultados", "analyzed_bbdd.xlsx"),
+        os.path.join(script_dir, "..", "resultados", "analyzed_bbdd.xlsx"),
+        "resultados/analyzed_bbdd.xlsx",
+        "../resultados/analyzed_bbdd.xlsx",
+        os.path.join(script_dir, "datos", "Servicios brindados ADS 2025 (1).xlsx"),
+        os.path.join(script_dir, "..", "datos", "Servicios brindados ADS 2025 (1).xlsx"),
+    ]
     
-    # Fallback: try relative path
-    fallback_path = os.path.join("resultados", "analyzed_bbdd.xlsx")
-    if os.path.exists(fallback_path):
-        return pd.read_excel(fallback_path)
+    for path in paths_to_try:
+        if os.path.exists(path):
+            try:
+                df = pd.read_excel(path)
+                st.sidebar.success(f"✅ Datos cargados")
+                return df
+            except Exception as e:
+                continue
     
     return None
 
