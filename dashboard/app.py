@@ -714,174 +714,177 @@ def main():
         
     elif "Indicadores" in selected_section:
         st.markdown('<h2 class="section-header">Indicadores Mensuales</h2>', unsafe_allow_html=True)
+        st.warning("⚠️ MODO DEBUG ACTIVADO: Si ves esto, el bloque de código se está ejecutando.")
         
-        # 1. Prepare Columns Structure (Months + Quarterly Avgs)
-        columns_struct = [
-            'INDICADOR', 'PUNTO DE CONTROL',
-            'Ene-25', 'Feb-25', 'Mar-25', 'PROMEDIO 1er. TRIMESTRE',
-            'Abr-25', 'May-25', 'Jun-25', 'PROMEDIO 2do. TRIMESTRE',
-            'Jul-25', 'Ago-25', 'Sep-25', 'PROMEDIO 3er. TRIMESTRE',
-            'Oct-25'
-        ]
-        
-        # Helper to get monthly data or '-'
-        def get_metric(metric_key, month, df_u, is_percent=True):
-            # For now implementing dynamic logic for SLA indicators
-            # Others are placeholders/hardcoded as per current data availability
-            if 'SLA' not in metric_key and 'Recobros' not in metric_key:
-                # Mockup for external data (Call Center, Recobros) based on provided images
-                # Ideally this should be a separate input or file
-                if month == 'Ago-25' and 'Abandono' in metric_key: return "0.07%"
-                if month == 'Sep-25' and 'Abandono' in metric_key: return "0.08%"
-                if month == 'Oct-25' and 'Abandono' in metric_key: return "0.17%"
+        try:
+            # 1. Prepare Columns Structure (Months + Quarterly Avgs)
+            columns_struct = [
+                'INDICADOR', 'PUNTO DE CONTROL',
+                'Ene-25', 'Feb-25', 'Mar-25', 'PROMEDIO 1er. TRIMESTRE',
+                'Abr-25', 'May-25', 'Jun-25', 'PROMEDIO 2do. TRIMESTRE',
+                'Jul-25', 'Ago-25', 'Sep-25', 'PROMEDIO 3er. TRIMESTRE',
+                'Oct-25'
+            ]
+            
+            # Helper to get monthly data or '-'
+            def get_metric(metric_key, month, df_u, is_percent=True):
+                # For now implementing dynamic logic for SLA indicators
+                # Others are placeholders/hardcoded as per current data availability
+                if 'SLA' not in metric_key and 'Recobros' not in metric_key:
+                    # Mockup for external data (Call Center, Recobros) based on provided images
+                    # Ideally this should be a separate input or file
+                    if month == 'Ago-25' and 'Abandono' in metric_key: return "0.07%"
+                    if month == 'Sep-25' and 'Abandono' in metric_key: return "0.08%"
+                    if month == 'Oct-25' and 'Abandono' in metric_key: return "0.17%"
+                    
+                    if month == 'Ago-25' and 'NS' in metric_key: return "99.04%"
+                    if month == 'Sep-25' and 'NS' in metric_key: return "98.47%"
+                    if month == 'Oct-25' and 'NS' in metric_key: return "97.30%"
+                    
+                    if month == 'Ago-25' and 'Quejas' in metric_key: return "0.99%"
+                    if month == 'Sep-25' and 'Quejas' in metric_key: return "1.19%"
+                    if month == 'Oct-25' and 'Quejas' in metric_key: return "0.37%"
+                    
+                    if 'Recobros' in metric_key and month in ['Feb-25', 'Mar-25', 'Abr-25', 'May-25', 'Jun-25', 'Jul-25', 'Ago-25', 'Sep-25', 'Oct-25']:
+                         # Placeholder values from screenshot roughly
+                         vals = {'Feb-25': "$2,420", 'Mar-25': "$3,000", 'Abr-25': "$7,560", 'May-25': "$4,000",
+                                 'Jun-25': "$1,600", 'Jul-25': "$1,500", 'Ago-25': "$2,900", 'Sep-25': "$7,274", 'Oct-25': "$800"}
+                         return vals.get(month, "-")
+                    
+                    return "-"
+
+                # Dynamic SLA Calc
+                df_m = df_u[df_u['mes'] == month]
+                if len(df_m) == 0: return "-"
                 
-                if month == 'Ago-25' and 'NS' in metric_key: return "99.04%"
-                if month == 'Sep-25' and 'NS' in metric_key: return "98.47%"
-                if month == 'Oct-25' and 'NS' in metric_key: return "97.30%"
+                # Common filters
+                mask_conc = df_m['status_del_servicio'].astype(str).str.contains('Concluido', case=False, na=False)
+                prog_col = next((c for c in df_m.columns if 'programad' in c.lower()), None)
+                mask_no_prog = True
+                if prog_col:
+                     mask_no_prog = df_m[prog_col].astype(str).str.lower() != 'si'
                 
-                if month == 'Ago-25' and 'Quejas' in metric_key: return "0.99%"
-                if month == 'Sep-25' and 'Quejas' in metric_key: return "1.19%"
-                if month == 'Oct-25' and 'Quejas' in metric_key: return "0.37%"
+                df_sla = df_m[mask_conc & mask_no_prog]
                 
-                if 'Recobros' in metric_key and month in ['Feb-25', 'Mar-25', 'Abr-25', 'May-25', 'Jun-25', 'Jul-25', 'Ago-25', 'Sep-25', 'Oct-25']:
-                     # Placeholder values from screenshot roughly
-                     vals = {'Feb-25': "$2,420", 'Mar-25': "$3,000", 'Abr-25': "$7,560", 'May-25': "$4,000",
-                             'Jun-25': "$1,600", 'Jul-25': "$1,500", 'Ago-25': "$2,900", 'Sep-25': "$7,274", 'Oct-25': "$800"}
-                     return vals.get(month, "-")
-                
+                def calc_sla(sub_df, limit_min):
+                     dur = pd.to_numeric(sub_df['duracion_minutos'], errors='coerce')
+                     valid = dur.notnull()
+                     if valid.sum() == 0: return "-"
+                     val = (dur[valid] <= limit_min).sum() / valid.sum() * 100
+                     return f"{val:.2f}%"
+
+                if metric_key == 'SLA_Vial_Urbano':
+                     mask = df_sla['origen_del_servicio'].astype(str).str.upper() == 'LOCAL'
+                     # Filter specific types if feasible, assuming general Vial Urbano
+                     return calc_sla(df_sla[mask], 45)
+                     
+                if metric_key == 'SLA_Situ_Urbano':
+                     # Assuming 'In Situ' implies specific types or just same threshold?
+                     # Screenshot shows distinct rows. Using general logic for now.
+                     mask = df_sla['origen_del_servicio'].astype(str).str.upper() == 'LOCAL'
+                     return calc_sla(df_sla[mask], 35) # Threshold from screenshot "Antes de 35 min"
+
+                if metric_key == 'SLA_Vial_Rural':
+                     mask = df_sla['origen_del_servicio'].astype(str).str.upper().str.contains('FORAN')
+                     return calc_sla(df_sla[mask], 90)
+
+                if metric_key == 'SLA_Situ_Rural':
+                     mask = df_sla['origen_del_servicio'].astype(str).str.upper().str.contains('FORAN')
+                     return calc_sla(df_sla[mask], 60) # Screenshot "Antes de 60 min"
+                     
                 return "-"
 
-            # Dynamic SLA Calc
-            df_m = df_u[df_u['mes'] == month]
-            if len(df_m) == 0: return "-"
+            # 2. Build rows data
+            rows_definitions = [
+                {'name': '% Cumplimiento del NS', 'control': 'Mínimo 90%', 'key': 'NS'},
+                {'name': '% Máximo de Abandono', 'control': 'Máximo 1%', 'key': 'Abandono'},
+                {'name': 'Coordinación Urbano y Rural', 'control': '10 minutos Mínimo el 85%', 'key': 'Coord'}, # No data in BBDD for Coord time
+                {'name': 'Contacto Vial-Urbano', 'control': 'Mínimo 86.50% Antes de 45 minutos', 'key': 'SLA_Vial_Urbano'},
+                {'name': 'Contacto In situ - Urbano', 'control': 'Mínimo 80% Antes de 35 minutos', 'key': 'SLA_Situ_Urbano'},
+                {'name': 'Contacto Vial - Rural', 'control': 'Mínimo 86.50% Antes de 90 minutos', 'key': 'SLA_Vial_Rural'},
+                {'name': 'Contacto In situ - Rural', 'control': 'Mínimo 90% Antes de 60 minutos', 'key': 'SLA_Situ_Rural'},
+                {'name': '% Quejas procedentes', 'control': 'Máximo 1% Todos los servicios', 'key': 'Quejas'},
+                {'name': 'Suma de recobros', 'control': '100% meta anual ($18.000)', 'key': 'Recobros'}
+            ]
             
-            # Common filters
-            mask_conc = df_m['status_del_servicio'].astype(str).str.contains('Concluido', case=False, na=False)
-            prog_col = next((c for c in df_m.columns if 'programad' in c.lower()), None)
-            mask_no_prog = True
-            if prog_col:
-                 mask_no_prog = df_m[prog_col].astype(str).str.lower() != 'si'
+            month_keys = ['Ene-25', 'Feb-25', 'Mar-25', 'Abr-25', 'May-25', 'Jun-25', 'Jul-25', 'Ago-25', 'Sep-25', 'Oct-25']
             
-            df_sla = df_m[mask_conc & mask_no_prog]
-            
-            def calc_sla(sub_df, limit_min):
-                 dur = pd.to_numeric(sub_df['duracion_minutos'], errors='coerce')
-                 valid = dur.notnull()
-                 if valid.sum() == 0: return "-"
-                 val = (dur[valid] <= limit_min).sum() / valid.sum() * 100
-                 return f"{val:.2f}%"
-
-            if metric_key == 'SLA_Vial_Urbano':
-                 mask = df_sla['origen_del_servicio'].astype(str).str.upper() == 'LOCAL'
-                 # Filter specific types if feasible, assuming general Vial Urbano
-                 return calc_sla(df_sla[mask], 45)
-                 
-            if metric_key == 'SLA_Situ_Urbano':
-                 # Assuming 'In Situ' implies specific types or just same threshold?
-                 # Screenshot shows distinct rows. Using general logic for now.
-                 mask = df_sla['origen_del_servicio'].astype(str).str.upper() == 'LOCAL'
-                 return calc_sla(df_sla[mask], 35) # Threshold from screenshot "Antes de 35 min"
-
-            if metric_key == 'SLA_Vial_Rural':
-                 mask = df_sla['origen_del_servicio'].astype(str).str.upper().str.contains('FORAN')
-                 return calc_sla(df_sla[mask], 90)
-
-            if metric_key == 'SLA_Situ_Rural':
-                 mask = df_sla['origen_del_servicio'].astype(str).str.upper().str.contains('FORAN')
-                 return calc_sla(df_sla[mask], 60) # Screenshot "Antes de 60 min"
-                 
-            return "-"
-
-        # 2. Build rows data
-        rows_definitions = [
-            {'name': '% Cumplimiento del NS', 'control': 'Mínimo 90%', 'key': 'NS'},
-            {'name': '% Máximo de Abandono', 'control': 'Máximo 1%', 'key': 'Abandono'},
-            {'name': 'Coordinación Urbano y Rural', 'control': '10 minutos Mínimo el 85%', 'key': 'Coord'}, # No data in BBDD for Coord time
-            {'name': 'Contacto Vial-Urbano', 'control': 'Mínimo 86.50% Antes de 45 minutos', 'key': 'SLA_Vial_Urbano'},
-            {'name': 'Contacto In situ - Urbano', 'control': 'Mínimo 80% Antes de 35 minutos', 'key': 'SLA_Situ_Urbano'},
-            {'name': 'Contacto Vial - Rural', 'control': 'Mínimo 86.50% Antes de 90 minutos', 'key': 'SLA_Vial_Rural'},
-            {'name': 'Contacto In situ - Rural', 'control': 'Mínimo 90% Antes de 60 minutos', 'key': 'SLA_Situ_Rural'},
-            {'name': '% Quejas procedentes', 'control': 'Máximo 1% Todos los servicios', 'key': 'Quejas'},
-            {'name': 'Suma de recobros', 'control': '100% meta anual ($18.000)', 'key': 'Recobros'}
-        ]
-        
-        month_keys = ['Ene-25', 'Feb-25', 'Mar-25', 'Abr-25', 'May-25', 'Jun-25', 'Jul-25', 'Ago-25', 'Sep-25', 'Oct-25']
-        
-        table_data = []
-        for row_def in rows_definitions:
-            row = {'INDICADOR': row_def['name'], 'PUNTO DE CONTROL': row_def['control']}
-            values_for_avg = {1: [], 2: [], 3: []} # Trimestres
-            
-            for m in month_keys:
-                val = get_metric(row_def['key'], m, df_unfiltered)
-                row[m] = val
+            table_data = []
+            for row_def in rows_definitions:
+                row = {'INDICADOR': row_def['name'], 'PUNTO DE CONTROL': row_def['control']}
+                values_for_avg = {1: [], 2: [], 3: []} # Trimestres
                 
-                # Logic for averages (cleaning % and $)
-                if val != "-" and '%' in val:
-                     try:
-                        num = float(val.replace('%', ''))
-                        if m in ['Ene-25', 'Feb-25', 'Mar-25']: values_for_avg[1].append(num)
-                        if m in ['Abr-25', 'May-25', 'Jun-25']: values_for_avg[2].append(num)
-                        if m in ['Jul-25', 'Ago-25', 'Sep-25']: values_for_avg[3].append(num)
-                     except: pass
-            
-            # Compute Averages
-            for t in [1, 2, 3]:
-                if values_for_avg[t]:
-                    avg = sum(values_for_avg[t]) / len(values_for_avg[t])
-                    row[f'PROMEDIO {t}er. TRIMESTRE' if t!=2 else f'PROMEDIO {t}do. TRIMESTRE'] = f"{avg:.2f}%"
-                else:
-                    row[f'PROMEDIO {t}er. TRIMESTRE' if t!=2 else f'PROMEDIO {t}do. TRIMESTRE'] = "-"
+                for m in month_keys:
+                    val = get_metric(row_def['key'], m, df_unfiltered)
+                    row[m] = val
                     
-            table_data.append(row)
+                    # Logic for averages (cleaning % and $)
+                    if val != "-" and '%' in val:
+                         try:
+                            num = float(val.replace('%', ''))
+                            if m in ['Ene-25', 'Feb-25', 'Mar-25']: values_for_avg[1].append(num)
+                            if m in ['Abr-25', 'May-25', 'Jun-25']: values_for_avg[2].append(num)
+                            if m in ['Jul-25', 'Ago-25', 'Sep-25']: values_for_avg[3].append(num)
+                         except: pass
+                
+                # Compute Averages
+                for t in [1, 2, 3]:
+                    if values_for_avg[t]:
+                        avg = sum(values_for_avg[t]) / len(values_for_avg[t])
+                        row[f'PROMEDIO {t}er. TRIMESTRE' if t!=2 else f'PROMEDIO {t}do. TRIMESTRE'] = f"{avg:.2f}%"
+                    else:
+                        row[f'PROMEDIO {t}er. TRIMESTRE' if t!=2 else f'PROMEDIO {t}do. TRIMESTRE'] = "-"
+                        
+                table_data.append(row)
+                
+            df_table = pd.DataFrame(table_data, columns=columns_struct)
             
-        df_table = pd.DataFrame(table_data, columns=columns_struct)
-        
-        # --- DEBUG SECTION (Remove after fixing) ---
-        st.error("Debugging Active")
-        st.write(f"Data source shape: {df_unfiltered.shape}")
-        st.write("Preview of generated table data:", df_table.head())
-        # -------------------------------------------
+            st.write("✅ Tabla generada con éxito. Filas:", len(df_table))
+            st.write(df_table.head())
 
-        # Style
-        def style_table(val):
-            # Basic styling logic
-            if isinstance(val, str):
-                if '-' in val and len(val) == 1: return ''
-                if '%' in val:
-                    try:
-                        num = float(val.replace('%', ''))
-                        # Heuristic: >80 is usually green/yellow, <5 is green (for abandonment/quejas)
-                        if num < 5: 
-                            # Abandono/Quejas: Low is Good
-                            if num <= 1.5: return 'background-color: #c8e6c9; color: black' # Green
-                            else: return 'background-color: #ffcdd2; color: black' # Red
-                        else:
-                            # SLAs/NS: High is Good
-                            if num >= 86.5: return 'background-color: #c8e6c9; color: black' # Green
-                            elif num >= 80: return 'background-color: #fff9c4; color: black' # Yellow
-                            else: return 'background-color: #ffcdd2; color: black' # Red
-                    except: pass
-                if '$' in val:
-                     return 'color: black' # Ensure readable if styled row
-            return ''
+            # Style
+            def style_table(val):
+                # Basic styling logic
+                if isinstance(val, str):
+                    if '-' in val and len(val) == 1: return ''
+                    if '%' in val:
+                        try:
+                            num = float(val.replace('%', ''))
+                            # Heuristic: >80 is usually green/yellow, <5 is green (for abandonment/quejas)
+                            if num < 5: 
+                                # Abandono/Quejas: Low is Good
+                                if num <= 1.5: return 'background-color: #c8e6c9; color: black' # Green
+                                else: return 'background-color: #ffcdd2; color: black' # Red
+                            else:
+                                # SLAs/NS: High is Good
+                                if num >= 86.5: return 'background-color: #c8e6c9; color: black' # Green
+                                elif num >= 80: return 'background-color: #fff9c4; color: black' # Yellow
+                                else: return 'background-color: #ffcdd2; color: black' # Red
+                        except: pass
+                    if '$' in val:
+                         return 'color: black' # Ensure readable if styled row
+                return ''
 
-        # Render with safer fallback
-        if df_table.empty:
-            st.warning("⚠️ La tabla de indicadores está vacía. Verifica los datos.")
-        else:
-            try:
-                # Use map if available (pandas >= 2.1.0), else applymap
-                styler = df_table.style
-                if hasattr(styler, 'map'):
-                    st.dataframe(styler.map(style_table), use_container_width=True, hide_index=True)
-                else:
-                    st.dataframe(styler.applymap(style_table), use_container_width=True, hide_index=True)
-            except Exception as e:
-                st.error(f"Error visualizando estilos: {e}")
-                st.dataframe(df_table, use_container_width=True, hide_index=True)
-        
-        st.caption("Nota: Los valores de Coordinación, NS, Abandono y Recobros son simulados o externos a la BBDD actual.")
+            # Render with safer fallback
+            if df_table.empty:
+                st.warning("⚠️ La tabla de indicadores está vacía. Verifica los datos.")
+            else:
+                try:
+                    # Use map if available (pandas >= 2.1.0), else applymap
+                    styler = df_table.style
+                    if hasattr(styler, 'map'):
+                        st.dataframe(styler.map(style_table), use_container_width=True, hide_index=True)
+                    else:
+                        st.dataframe(styler.applymap(style_table), use_container_width=True, hide_index=True)
+                except Exception as e:
+                    st.error(f"Error visualizando estilos: {e}")
+                    st.dataframe(df_table, use_container_width=True, hide_index=True)
+            
+            st.caption("Nota: Los valores de Coordinación, NS, Abandono y Recobros son simulados o externos a la BBDD actual.")
+
+        except Exception as e:
+            st.error("❌ ERROR CRÍTICO AL GENERAR TABLA:")
+            st.exception(e)
     
     # ==========================================================================
     # DEMANDA GEOGRÁFICA
