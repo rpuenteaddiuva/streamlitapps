@@ -402,6 +402,9 @@ def main():
             placeholder="Elige uno o más meses..."
         )
     
+    # Save unfiltered DF for historical analysis
+    df_unfiltered = df.copy()
+    
     # Apply month filter
     if selected_months:
         df = df[df['mes'].isin(selected_months)]
@@ -674,43 +677,46 @@ def main():
     elif "Indicadores" in selected_section:
         st.markdown('<h2 class="section-header">Indicadores Mensuales</h2>', unsafe_allow_html=True)
         
-        # Calculate dynamic SLA for last 3 months
-        # Filter for months in data
-        months_order = ['Ago-25', 'Sep-25', 'Oct-25']
+    elif "Indicadores" in selected_section:
+        st.markdown('<h2 class="section-header">Indicadores Mensuales</h2>', unsafe_allow_html=True)
         
-        # Initialize dictionary with hardcoded Call Center metrics (not in BBDD)
+        # Calculate dynamic SLA for ALL months using unfiltered data
+        # Use 'all_months' calculated earlier which is sorted
+        months_to_show = all_months 
+        
+        # Initialize dictionary
         data = {
-            'Indicador': ['% Cumplimiento NS (Call Center)', '% Máx. Abandono (Call Center)', '% Quejas', 
-                         'SLA Global', 'SLA Vial Urbano', 'SLA Vial Rural (Foráneo)'],
-            'Punto de Control': ['Mínimo 90%', 'Máximo 1%', 'Máximo 1%',
-                                'Mínimo 86.5%', 'Mínimo 86.50% / 45 min', 'Mínimo 86.50% / 90 min']
+            'Indicador': [
+                'SLA Global', 'SLA Vial Urbano', 'SLA Vial Rural',
+                '% Cumplimiento NS (CC)', '% Abandono (CC)', '% Quejas'
+            ],
+            'Punto de Control': [
+                'Mínimo 86.5%', 'Mínimo 86.50% / 45 min', 'Mínimo 86.50% / 90 min',
+                'Mínimo 90%', 'Máximo 1%', 'Máximo 1%'
+            ]
         }
         
-        for month in months_order:
-            data[month] = []
+        for month in months_to_show:
+            col_data = [] # SLA Global, Urbano, Rural, NS, Abandono, Quejas
             
-            # 1-3. Hardcoded / External metrics (placeholder or keep previous values if available)
-            # Using placeholders or maintaining previous hardcoded values if they were provided externally
-            # For now, keeping the values from the image/previous code as they likely come from another source
-            if month == 'Ago-25':
-                data[month].extend(['99.04%', '0.07%', '0.99%'])
-            elif month == 'Sep-25':
-                data[month].extend(['98.47%', '0.08%', '1.19%'])
-            elif month == 'Oct-25':
-                data[month].extend(['97.30%', '0.17%', '0.37%'])
-            else:
-                data[month].extend(['-', '-', '-'])
+            # --- CALCULATE SLAs from BBDD (df_unfiltered) ---
+            df_m = df_unfiltered[df_unfiltered['mes'] == month]
             
-            # Calculate Dynamic SLA from BBDD
-            df_m = df[df['mes'] == month]
             if len(df_m) > 0:
+                # Reuse metric calculation logic
+                # Only excluding 'Otros' if the user checked the box? 
+                # Ideally, Indicators table should reflect the same logic as the main dashboard filters currently active?
+                # BUT, df_unfiltered ignores month filter. 
+                # It does NOT ignore the 'Exclude Others' filter if it was applied BEFORE 'df_unfiltered = df.copy()'.
+                # Let's check where 'df_unfiltered' was defined.
+                # It was defined AFTER 'Exclude Others' filter (lines 435+), so 'Otros' exclusion IS Applied.
+                # Correct.
+                
                 metrics_m = calculate_metrics(df_m)
                 sla_global = metrics_m['sla']
+                col_data.append(f"{sla_global:.2f}%")
                 
-                # Recalculate specific breakdowns
-                # Urbano vs Rural
-                # We need to reuse the logic inside calculate_metrics but specific for Origin
-                # Or just do a quick calc here
+                # Urbano / Rural Breakdowns
                 mask_conc = df_m['status_del_servicio'].astype(str).str.contains('Concluido', case=False, na=False)
                 prog_col = next((c for c in df_m.columns if 'programad' in c.lower()), None)
                 if prog_col:
@@ -723,53 +729,62 @@ def main():
                 def calc_sla_subset(sub_df, is_foraneo):
                     if len(sub_df) == 0: return 0
                     if 'duracion_minutos' not in sub_df.columns: return 0
-                    
                     limite = 90 if is_foraneo else 45
                     dur = pd.to_numeric(sub_df['duracion_minutos'], errors='coerce')
                     valid = dur.notnull()
                     if valid.sum() == 0: return 0
-                    
                     cumple = (dur[valid] <= limite).sum()
                     return (cumple / valid.sum()) * 100
 
-                # Urbano (LOCAL)
                 urbano_mask = df_sla['origen_del_servicio'].astype(str).str.upper() == 'LOCAL'
                 sla_urbano = calc_sla_subset(df_sla[urbano_mask], False)
-                
-                # Rural (FORANEO)
+                col_data.append(f"{sla_urbano:.2f}%")
+
                 rural_mask = df_sla['origen_del_servicio'].astype(str).str.upper().str.contains('FORAN')
                 sla_rural = calc_sla_subset(df_sla[rural_mask], True)
+                col_data.append(f"{sla_rural:.2f}%")
                 
-                data[month].extend([f"{sla_global:.2f}%", f"{sla_urbano:.2f}%", f"{sla_rural:.2f}%"])
             else:
-                 data[month].extend(['-', '-', '-'])
+                col_data.extend(['-', '-', '-'])
+            
+            # --- HARDCODED METRICS (Placeholders for missing BBDD data) ---
+            # Keeping only recently provided values, others '-'
+            if month == 'Ago-25':
+                col_data.extend(['99.04%', '0.07%', '0.99%'])
+            elif month == 'Sep-25':
+                col_data.extend(['98.47%', '0.08%', '1.19%'])
+            elif month == 'Oct-25':
+                col_data.extend(['97.30%', '0.17%', '0.37%'])
+            else:
+                col_data.extend(['-', '-', '-'])
+            
+            data[month] = col_data
 
         df_ind = pd.DataFrame(data)
         
-        # Style function for conditional formatting with CONTRAST FIX
+        # Style function for conditional formatting
         def highlight_cells(val):
             try:
                 if isinstance(val, str) and '%' in val:
                     num = float(val.replace('%', ''))
-                    # Different rules for Abandono/Quejas (lower is better)
-                    is_inverse = False # logic to detect row? styled applymap is cell by cell.
-                    # Simplified logic: High is good (SLA), Low is good (Quejas/Abandono)
-                    # This function is applied to all month columns. 
-                    # Use a simpler approach: Apply style based on value range assuming standard SLA > 80
-                    # For small numbers (abandono/quejas < 5), we assume green if low.
+                    # Quejas/Abandono (Indices 4 and 5 in the list -> rows in DataFrame?)
+                    # Dataframe is Indicador | Control | M1 | M2...
+                    # We need to know which ROW we are strictly. 
+                    # Style function is applied cell-wise. This is tricky for row-dependent logic.
+                    # Simplified: If < 5 and not SLA...
                     
                     if num < 5: # Likely Abandono/Quejas
-                        if num <= 1.0: return 'background-color: #c8e6c9; color: black;' # Green
-                        else: return 'background-color: #ffcdd2; color: black;' # Red
-                    else: # Likely SLA/NS
-                        if num >= 86.5: return 'background-color: #c8e6c9; color: black;' # Green
-                        elif num >= 80: return 'background-color: #fff9c4; color: black;' # Yellow
-                        else: return 'background-color: #ffcdd2; color: black;' # Red
+                         if num <= 1.0: return 'background-color: #c8e6c9; color: black'
+                         else: return 'background-color: #ffcdd2; color: black'
+                    else: # SLA / NS
+                         if num >= 86.5: return 'background-color: #c8e6c9; color: black'
+                         elif num >= 80: return 'background-color: #fff9c4; color: black'
+                         else: return 'background-color: #ffcdd2; color: black'
                 return ''
             except:
                 return ''
         
-        st.dataframe(df_ind.style.applymap(highlight_cells, subset=months_order),
+        st.dataframe(df_ind.style.applymap(highlight_cells, subset=months_to_show),
                     use_container_width=True, hide_index=True)
         
         st.markdown("""
@@ -777,6 +792,7 @@ def main():
         - 🟢 Verde: Cumple (≥86.5%)
         - 🟡 Amarillo: Cerca del objetivo (80-86.5%)
         - 🔴 Rojo: No cumple (<80%)
+        - **CC**: Datos de Call Center (externos a BBDD)
         """)
     
     # ==========================================================================
