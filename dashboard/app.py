@@ -17,7 +17,8 @@ st.set_page_config(
 )
 
 # Professional Dark Theme CSS
-st.markdown("""
+def load_css():
+    st.markdown("""
 <style>
     /* Import Google Font */
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
