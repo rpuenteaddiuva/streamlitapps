@@ -432,6 +432,28 @@ def main():
         selected_tipo = st.sidebar.selectbox("Tipo Servicio:", tipos)
         if selected_tipo != 'Todos':
             df = df[df['tipo_de_servicio'] == selected_tipo]
+            
+    # Exclude 'Otros' toggle
+    st.sidebar.divider()
+    exclude_otros = st.sidebar.checkbox("⚠️ Excluir categoría 'Otros'", value=True, 
+                                      help="Excluye servicios Médicos, Hogar, etc. del cálculo de SLA")
+                                      
+    if exclude_otros:
+        # Define logic for 'Otros' same as categorization
+        def is_otros(t):
+            t = str(t).upper()
+            if 'AUXILIO' in t or 'REMOLQUE' in t or 'GRUA' in t or 'LEGAL' in t or 'SITU' in t:
+                return False
+            return True
+        
+        mask_otros = df['tipo_de_servicio'].apply(is_otros)
+        df_excluded_count = mask_otros.sum()
+        df = df[~mask_otros]
+        if df_excluded_count > 0:
+            st.sidebar.caption(f"ℹ️ Se han filtrado {df_excluded_count} servicios 'Otros'")
+            
+    # Disclaimer about Stop the Clock
+    st.sidebar.info("ℹ️ **Nota:** El cálculo de SLA es estricto (tiempo total) ya que la base de datos no contiene registros de 'tiempos muertos' imputables al cliente.")
     
     # Calculate metrics with filtered data
     metrics = calculate_metrics(df)
