@@ -70,54 +70,102 @@ def load_data():
     return None
 
 def calculate_metrics(df):
-    """Calculate all KPIs"""
+    """Calcula KPIs dinámicos basándose en los datos filtrados (Lógica V3 Auditoría)"""
     metrics = {}
     
-    # Total services
+    # 1. Total Servicios
     metrics['total_servicios'] = len(df)
-    metrics['concluidos'] = len(df[df['status_del_servicio'] == 'Concluido'])
+    metrics['concluidos'] = len(df[df['status_del_servicio'].astype(str).str.contains('Concluido', case=False, na=False)])
     
-    # SLA (from TIEMPO sheet values)
-    origen_counts = df['origen_del_servicio'].value_counts()
-    local = origen_counts.get('LOCAL', 0)
-    foraneo = origen_counts.get('FORANEO', 0)
-    total = local + foraneo
-    if total > 0:
-        sla_local = 0.8579881656804734
-        sla_foraneo = 0.7825
-        metrics['sla'] = ((local * sla_local) + (foraneo * sla_foraneo)) / total * 100
+    # 2. SLA Dinámico (Lógica V3 Auditoría)
+    # Filtro: Solo Concluidos + No Programados
+    mask_status = df['status_del_servicio'].astype(str).str.contains('Concluido', case=False, na=False)
+    
+    # Intento buscar columna de programados
+    col_prog = next((c for c in df.columns if 'programado' in c.lower()), None)
+    if col_prog:
+        mask_prog = df[col_prog].astype(str).str.contains('No', case=False, na=False)
     else:
-        metrics['sla'] = 0
+        mask_prog = pd.Series([True] * len(df), index=df.index)
+        
+    df_sla = df[mask_status & mask_prog].copy()
     
-    # NPS
-    nps_col = next((c for c in df.columns if 'nps' in c.lower() and 'calificacion' in c.lower()), None)
-    if nps_col:
-        nps_data = pd.to_numeric(df[nps_col], errors='coerce').dropna()
-        if len(nps_data) > 0:
-            prom = len(nps_data[(nps_data >= 9) | (nps_data == 5)]) / len(nps_data)
-            det = len(nps_data[(nps_data <= 6) & (nps_data != 4) & (nps_data != 5)]) / len(nps_data)
-            metrics['nps'] = (prom - det) * 100
+    # Buscar columnas de cumplimiento del sistema
+    cols_cumple = [c for c in df_sla.columns if 'cumplimiento' in c.lower() and 'vial' in c.lower()]
+    
+    if cols_cumple:
+        # Usar columna de cumplimiento del sistema
+        col_target = cols_cumple[0]
+        cumple = len(df_sla[df_sla[col_target].astype(str).str.contains('CUMPLE', case=False, na=False) & 
+                           ~df_sla[col_target].astype(str).str.contains('NO CUMPLE', case=False, na=False)])
+        total_sla = len(df_sla[df_sla[col_target].notna()])
+    elif 'estado_sla' in df_sla.columns:
+        cumple = len(df_sla[df_sla['estado_sla'] == 'CUMPLE'])
+        total_sla = len(df_sla)
+    else:
+        # Fallback: calcular basado en duración
+        if 'duracion_minutos' in df_sla.columns:
+            df_sla['sla_check'] = df_sla.apply(
+                lambda r: r['duracion_minutos'] <= (45 if str(r.get('origen_del_servicio', '')).upper() == 'LOCAL' else 90), 
+                axis=1
+            )
+            cumple = df_sla['sla_check'].sum()
+            total_sla = len(df_sla)
         else:
-            metrics['nps'] = 0
-    else:
-        metrics['nps'] = 0
+            cumple = 0
+            total_sla = 0
+        
+    metrics['sla'] = (cumple / total_sla * 100) if total_sla > 0 else 0
     
+    # 3. NPS Dinámico (Detecta escala 1-5 o 0-10 automáticamente)
+    nps_col = next((c for c in df.columns if 'nps' in c.lower() and 'calificacion' in c.lower()), None)
+    metrics['nps'] = 0
+    
+    if nps_col:
+        df_nps = pd.to_numeric(df[nps_col], errors='coerce').dropna()
+        if not df_nps.empty:
+            max_val = df_nps.max()
+            if max_val <= 5:
+                # Escala 1-5
+                prom = len(df_nps[df_nps == 5])
+                det = len(df_nps[df_nps <= 3])
+            else:
+                # Escala 0-10
+                prom = len(df_nps[df_nps >= 9])
+                det = len(df_nps[df_nps <= 6])
+            
+            metrics['nps'] = ((prom - det) / len(df_nps)) * 100
+
     return metrics
 
 def main():
     # Header
     st.markdown('<h1 class="main-header">📊 Boletín de Calidad ADS</h1>', unsafe_allow_html=True)
-    st.markdown('<p style="text-align:center; font-size:1.2rem;">Octubre 2025 | Asistencia Especializada del Sur</p>', unsafe_allow_html=True)
     
-    # Load data
-    df = load_data()
+    # Sidebar - Data Source
+    st.sidebar.title("🔧 Panel de Control")
     
-    if df is None:
-        st.error("❌ No se encontró el archivo de datos. Ejecuta primero `ads_utils.py`.")
-        return
+    # File uploader
+    st.sidebar.subheader("📂 Fuente de Datos")
+    uploaded_file = st.sidebar.file_uploader("Cargar Excel/CSV", type=["xlsx", "csv"])
     
-    # Calculate metrics
-    metrics = calculate_metrics(df)
+    if uploaded_file:
+        # Load from uploaded file
+        if uploaded_file.name.endswith('.csv'):
+            df = pd.read_csv(uploaded_file, encoding='latin1')
+        else:
+            df = pd.read_excel(uploaded_file)
+        # Standardize column names
+        df.columns = df.columns.str.strip().str.lower().str.replace(' ', '_').str.replace('.', '')
+        st.sidebar.success(f"✅ {uploaded_file.name}")
+    else:
+        # Load from local file
+        df = load_data()
+        if df is None:
+            st.info("👋 **Bienvenido!** Sube un archivo Excel (BBDD) en el panel lateral para comenzar.")
+            st.sidebar.info("Arrastra tu archivo aquí ↑")
+            return
+        st.sidebar.caption("📁 Usando datos locales")
     
     # Sidebar
     st.sidebar.title("🔧 Navegación")
@@ -156,15 +204,35 @@ def main():
             placeholder="Elige uno o más meses..."
         )
     
-    # Apply filter
+    # Apply month filter
     if selected_months:
         df = df[df['mes'].isin(selected_months)]
-        # Recalculate metrics with filtered data
-        metrics = calculate_metrics(df)
     else:
         st.sidebar.warning("⚠️ Selecciona al menos un mes")
     
-    st.sidebar.caption(f"📊 {len(df):,} registros seleccionados")
+    # Drill-down filters
+    st.sidebar.divider()
+    st.sidebar.subheader("🔍 Drill-Down")
+    
+    # Plan filter
+    if 'nombre_del_plan' in df.columns:
+        planes = ['Todos'] + sorted(df['nombre_del_plan'].dropna().unique().tolist())
+        selected_plan = st.sidebar.selectbox("Plan:", planes)
+        if selected_plan != 'Todos':
+            df = df[df['nombre_del_plan'] == selected_plan]
+    
+    # Ciudad filter
+    if 'ciudad' in df.columns:
+        ciudades = ['Todas'] + sorted(df['ciudad'].dropna().astype(str).unique().tolist())[:20]  # Top 20
+        selected_city = st.sidebar.selectbox("Ciudad:", ciudades)
+        if selected_city != 'Todas':
+            df = df[df['ciudad'] == selected_city]
+    
+    # Calculate metrics with filtered data
+    metrics = calculate_metrics(df)
+    
+    st.sidebar.divider()
+    st.sidebar.caption(f"📊 **{len(df):,}** registros seleccionados")
     
     # ==========================================================================
     # RESUMEN EJECUTIVO
@@ -179,11 +247,15 @@ def main():
         with col2:
             st.metric("✅ Concluidos", f"{metrics['concluidos']:,}")
         with col3:
-            delta_sla = metrics['sla'] - 86.5
-            st.metric("⏱️ SLA", f"{metrics['sla']:.1f}%", delta=f"{delta_sla:.1f}%")
+            target_sla = 86.5
+            val_sla = metrics['sla']
+            delta_sla = val_sla - target_sla
+            st.metric(f"⏱️ SLA (Meta {target_sla}%)", f"{val_sla:.1f}%", delta=f"{delta_sla:.1f}%")
         with col4:
-            delta_nps = metrics['nps'] - 82.14
-            st.metric("💚 NPS", f"{metrics['nps']:.1f}%", delta=f"{delta_nps:.1f}%")
+            target_nps = 82.1
+            val_nps = metrics['nps']
+            delta_nps = val_nps - target_nps
+            st.metric(f"💚 NPS (Meta {target_nps}%)", f"{val_nps:.1f}%", delta=f"{delta_nps:.1f}%")
         
         st.divider()
         
