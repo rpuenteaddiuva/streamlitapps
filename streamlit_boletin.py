@@ -190,8 +190,15 @@ def main():
     st.sidebar.divider()
     st.sidebar.subheader("🗓️ Filtros")
     
-    # Get unique months and sort them properly
-    all_months = sorted(df['mes'].dropna().unique().tolist())
+    # Get unique months and sort chronologically
+    month_order = {'Ene': 1, 'Feb': 2, 'Mar': 3, 'Abr': 4, 'May': 5, 'Jun': 6,
+                   'Jul': 7, 'Ago': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dic': 12}
+    raw_months = df['mes'].dropna().unique().tolist()
+    # Sort by extracting month prefix (e.g., "Ene-25" -> "Ene")
+    all_months = sorted(raw_months, key=lambda x: (
+        int(str(x).split('-')[-1]) if '-' in str(x) else 0,  # Year first
+        month_order.get(str(x).split('-')[0], 0)  # Then month
+    ))
     
     # Select All checkbox
     select_all = st.sidebar.checkbox("Seleccionar todos los meses", value=True)
