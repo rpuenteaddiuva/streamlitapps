@@ -16,156 +16,228 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Modern Custom CSS with Glassmorphism and Gradients
+# Professional Dark Theme CSS
 st.markdown("""
 <style>
     /* Import Google Font */
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
     
-    /* Global Styles */
-    .stApp {
-        font-family: 'Inter', sans-serif;
+    /* ===== DARK THEME COLOR SYSTEM ===== */
+    :root {
+        --bg-main: #0f1316;
+        --bg-card: #111217;
+        --border: #1f2a33;
+        --text-primary: #e6eef3;
+        --text-secondary: #9aa8b3;
+        --accent: #1f8ef1;
+        --success: #2ecc71;
+        --warning: #f39c12;
+        --danger: #e74c3c;
     }
     
-    /* Main Header with Gradient */
+    /* Global App Styling */
+    .stApp {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        background-color: var(--bg-main);
+    }
+    
+    /* Main content area */
+    .main .block-container {
+        padding: 2rem 2.5rem;
+        max-width: 1400px;
+    }
+    
+    /* ===== HEADER ===== */
     .main-header {
-        font-size: 2.8rem;
+        font-size: 2.2rem;
         font-weight: 700;
-        background: linear-gradient(135deg, #0055a6, #00a6e6);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
+        color: var(--accent);
         text-align: center;
         padding: 1.5rem 0;
         margin-bottom: 1rem;
+        letter-spacing: -0.5px;
     }
     
-    /* Section Headers */
     .section-header {
-        color: #0055a6;
+        color: var(--text-primary);
         font-weight: 600;
-        font-size: 1.8rem;
-        border-bottom: 3px solid;
-        border-image: linear-gradient(90deg, #0055a6, #00a6e6) 1;
+        font-size: 1.5rem;
+        border-bottom: 2px solid var(--border);
         padding-bottom: 0.75rem;
-        margin: 2rem 0 1.5rem 0;
+        margin: 1.5rem 0 1rem 0;
     }
     
-    /* Glassmorphism Cards */
-    .glass-card {
-        background: rgba(255, 255, 255, 0.1);
-        backdrop-filter: blur(10px);
-        border-radius: 16px;
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        padding: 1.5rem;
-        box-shadow: 0 8px 32px rgba(0, 85, 166, 0.1);
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
-    }
-    
-    .glass-card:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 12px 40px rgba(0, 85, 166, 0.2);
-    }
-    
-    /* Metric Improvements */
+    /* ===== KPI CARDS ===== */
     [data-testid="stMetric"] {
-        background: linear-gradient(135deg, rgba(0, 85, 166, 0.05), rgba(0, 166, 230, 0.05));
+        background: var(--bg-card);
+        border: 1px solid var(--border);
         border-radius: 12px;
-        padding: 1rem !important;
-        border: 1px solid rgba(0, 85, 166, 0.1);
-        transition: all 0.3s ease;
+        padding: 1.25rem !important;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
     }
     
     [data-testid="stMetric"]:hover {
-        background: linear-gradient(135deg, rgba(0, 85, 166, 0.1), rgba(0, 166, 230, 0.1));
-        border-color: rgba(0, 85, 166, 0.2);
+        transform: translateY(-3px);
+        box-shadow: 0 6px 24px rgba(0, 0, 0, 0.4);
     }
     
     [data-testid="stMetricLabel"] {
-        font-weight: 600;
-        color: #0055a6 !important;
+        font-weight: 500;
+        font-size: 0.85rem;
+        color: var(--text-secondary) !important;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
     }
     
     [data-testid="stMetricValue"] {
         font-size: 2rem !important;
         font-weight: 700;
-        color: #1a1a2e !important;
+        color: var(--text-primary) !important;
     }
     
-    /* Positive/Negative Delta Colors */
-    [data-testid="stMetricDelta"] svg {
-        width: 1rem;
-        height: 1rem;
+    [data-testid="stMetricDelta"] {
+        font-size: 0.9rem;
     }
     
-    /* Sidebar Styling */
+    /* ===== SIDEBAR ===== */
     [data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #0055a6 0%, #003366 100%);
+        background: linear-gradient(180deg, #0a1929 0%, #0d2137 100%);
+        border-right: 1px solid var(--border);
     }
     
-    [data-testid="stSidebar"] .stMarkdown {
-        color: white;
+    [data-testid="stSidebar"] .stMarkdown,
+    [data-testid="stSidebar"] label,
+    [data-testid="stSidebar"] p {
+        color: var(--text-primary) !important;
     }
     
-    [data-testid="stSidebar"] h1, [data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3 {
-        color: white !important;
+    [data-testid="stSidebar"] h1, 
+    [data-testid="stSidebar"] h2, 
+    [data-testid="stSidebar"] h3 {
+        color: var(--accent) !important;
+        font-weight: 600;
     }
     
-    /* DataFrames */
+    /* ===== FILE UPLOADER ===== */
+    .stFileUploader {
+        background: var(--bg-card);
+        border: 1px dashed var(--border);
+        border-radius: 10px;
+        padding: 1rem;
+    }
+    
+    .stFileUploader:hover {
+        border-color: var(--accent);
+    }
+    
+    /* ===== DATAFRAMES / TABLES ===== */
     .stDataFrame {
-        border-radius: 12px;
+        border-radius: 10px;
         overflow: hidden;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        border: 1px solid var(--border);
     }
     
-    /* Buttons */
+    .stDataFrame [data-testid="stDataFrameResizable"] {
+        background: var(--bg-card);
+    }
+    
+    /* ===== SELECTBOXES & INPUTS ===== */
+    .stSelectbox > div > div,
+    .stMultiSelect > div > div {
+        background: var(--bg-card);
+        border-color: var(--border);
+        color: var(--text-primary);
+    }
+    
+    /* ===== BUTTONS ===== */
     .stButton > button {
-        background: linear-gradient(135deg, #0055a6, #00a6e6);
+        background: var(--accent);
         color: white;
         border: none;
         border-radius: 8px;
-        padding: 0.5rem 1.5rem;
+        padding: 0.6rem 1.5rem;
         font-weight: 600;
-        transition: all 0.3s ease;
+        transition: all 0.2s ease;
     }
     
     .stButton > button:hover {
+        background: #3da0f5;
         transform: translateY(-2px);
-        box-shadow: 0 4px 15px rgba(0, 85, 166, 0.4);
+        box-shadow: 0 4px 12px rgba(31, 142, 241, 0.35);
     }
     
-    /* Dividers */
+    /* ===== DIVIDERS ===== */
     hr {
         border: none;
-        height: 2px;
-        background: linear-gradient(90deg, transparent, #0055a6, transparent);
-        margin: 2rem 0;
+        height: 1px;
+        background: var(--border);
+        margin: 1.5rem 0;
     }
     
-    /* Info/Warning boxes */
+    /* ===== ALERTS ===== */
     .stAlert {
-        border-radius: 12px;
-        border-left: 4px solid #0055a6;
+        border-radius: 10px;
+        background: var(--bg-card);
+        border: 1px solid var(--border);
     }
     
-    /* Hide Streamlit branding */
+    /* ===== SCROLLBAR ===== */
+    ::-webkit-scrollbar {
+        width: 10px;
+        height: 10px;
+    }
+    
+    ::-webkit-scrollbar-track {
+        background: var(--bg-main);
+    }
+    
+    ::-webkit-scrollbar-thumb {
+        background: var(--border);
+        border-radius: 10px;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+        background: #2a3a47;
+    }
+    
+    /* ===== HIDE STREAMLIT BRANDING ===== */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
+    header[data-testid="stHeader"] {background: transparent;}
+    
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 800px) {
+        .main-header { font-size: 1.6rem; }
+        [data-testid="stMetricValue"] { font-size: 1.5rem !important; }
+        .main .block-container { padding: 1rem; }
+    }
 </style>
 """, unsafe_allow_html=True)
 
-# Modern Color Palette
+# Dark Theme Color Palette for Plotly
 COLORS = {
-    'primary': '#0055a6',
-    'primary_light': '#00a6e6',
-    'secondary': '#4a90d9',
-    'success': '#00c853',
-    'success_dark': '#2e7d32',
-    'warning': '#ffab00',
-    'danger': '#ff5252',
-    'purple': '#7c4dff',
-    'dark': '#1a1a2e',
-    'light': '#f8f9fa',
+    'primary': '#1f8ef1',
+    'secondary': '#3da0f5',
+    'success': '#2ecc71',
+    'warning': '#f39c12',
+    'danger': '#e74c3c',
+    'purple': '#9b59b6',
+    'text': '#e6eef3',
+    'text_secondary': '#9aa8b3',
+    'bg': '#0f1316',
+    'card': '#111217',
+    'border': '#1f2a33',
+}
+
+# Plotly Dark Template
+PLOTLY_TEMPLATE = {
+    'layout': {
+        'paper_bgcolor': '#111217',
+        'plot_bgcolor': '#111217',
+        'font': {'color': '#e6eef3', 'family': 'Inter'},
+        'xaxis': {'gridcolor': '#1f2a33', 'linecolor': '#1f2a33'},
+        'yaxis': {'gridcolor': '#1f2a33', 'linecolor': '#1f2a33'},
+    }
 }
 
 @st.cache_data
