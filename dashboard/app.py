@@ -708,12 +708,6 @@ def main():
     # ==========================================================================
     elif "Indicadores" in selected_section:
         st.markdown('<h2 class="section-header">Indicadores Mensuales</h2>', unsafe_allow_html=True)
-        
-    elif "Indicadores" in selected_section:
-        st.markdown('<h2 class="section-header">Indicadores Mensuales</h2>', unsafe_allow_html=True)
-        
-    elif "Indicadores" in selected_section:
-        st.markdown('<h2 class="section-header">Indicadores Mensuales</h2>', unsafe_allow_html=True)
         st.warning("⚠️ MODO DEBUG ACTIVADO: Si ves esto, el bloque de código se está ejecutando.")
         
         try:
