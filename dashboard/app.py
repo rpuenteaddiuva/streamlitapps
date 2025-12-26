@@ -838,9 +838,9 @@ def main():
         df_table = pd.DataFrame(table_data, columns=columns_struct)
         
         # --- DEBUG SECTION (Remove after fixing) ---
-        # st.error("Debugging Active")
-        # st.write(f"Data source shape: {df_unfiltered.shape}")
-        # st.write("Preview of generated table data:", df_table.head())
+        st.error("Debugging Active")
+        st.write(f"Data source shape: {df_unfiltered.shape}")
+        st.write("Preview of generated table data:", df_table.head())
         # -------------------------------------------
 
         # Style
