@@ -194,62 +194,50 @@ def load_data():
     
     return None
 
-def calculate_metrics(df):
-    """Calcula KPIs 100% dinámicos desde datos crudos (Metodología V3)"""
+@st.cache_data
+def calculate_metrics(_df):
+    """Calcula KPIs optimizados con operaciones vectorizadas"""
+    df = _df  # Workaround for unhashable df
     metrics = {}
     
     # 1. Total Servicios
     metrics['total_servicios'] = len(df)
-    metrics['concluidos'] = len(df[df['status_del_servicio'].astype(str).str.contains('Concluido', case=False, na=False)])
+    mask_conc = df['status_del_servicio'].astype(str).str.contains('Concluido', case=False, na=False)
+    metrics['concluidos'] = mask_conc.sum()
     
-    # 2. SLA - Cálculo dinámico desde timestamps
-    # Paso 1: Filtros de exclusión
-    mask_concluido = df['status_del_servicio'].astype(str).str.contains('Concluido', case=False, na=False)
-    
-    # Buscar columna de servicios programados
+    # 2. SLA - Operaciones vectorizadas (no usar .apply())
     prog_col = next((c for c in df.columns if 'programad' in c.lower()), None)
     if prog_col:
         mask_no_prog = df[prog_col].astype(str).str.lower() != 'si'
     else:
-        mask_no_prog = pd.Series([True] * len(df), index=df.index)
+        mask_no_prog = True
     
-    df_sla = df[mask_concluido & mask_no_prog].copy()
+    df_sla = df[mask_conc & mask_no_prog]
     
-    # Paso 2: Calcular duración si existe columna duracion_minutos
-    if 'duracion_minutos' in df_sla.columns:
-        # Paso 3: Aplicar umbrales según origen
-        def evaluar_sla(row):
-            duracion = row['duracion_minutos']
-            if pd.isna(duracion):
-                return None
-            origen = str(row.get('origen_del_servicio', '')).upper()
-            # Umbral: LOCAL=45min, FORANEO=90min
-            limite = 90 if 'FORAN' in origen else 45
-            return 'CUMPLE' if duracion <= limite else 'NO CUMPLE'
+    if 'duracion_minutos' in df_sla.columns and len(df_sla) > 0:
+        # Vectorized: Umbral según origen
+        origen = df_sla['origen_del_servicio'].astype(str).str.upper()
+        limite = pd.Series(45, index=df_sla.index)
+        limite[origen.str.contains('FORAN', na=False)] = 90
         
-        df_sla['estado_sla'] = df_sla.apply(evaluar_sla, axis=1)
-        df_valid = df_sla[df_sla['estado_sla'].notnull()]
+        # Vectorized: Cumple si duracion <= limite
+        duracion = pd.to_numeric(df_sla['duracion_minutos'], errors='coerce')
+        cumple = duracion <= limite
+        valid = duracion.notnull()
         
-        if len(df_valid) > 0:
-            cumple = (df_valid['estado_sla'] == 'CUMPLE').sum()
-            metrics['sla'] = (cumple / len(df_valid)) * 100
+        if valid.sum() > 0:
+            metrics['sla'] = (cumple[valid].sum() / valid.sum()) * 100
         else:
             metrics['sla'] = 0
     else:
-        # Fallback: promedio ponderado si no hay duracion_minutos
-        try:
-            origen_counts = df['origen_del_servicio'].value_counts()
-            local = origen_counts.get('LOCAL', 0)
-            foraneo = origen_counts.get('FORANEO', 0)
-            total = local + foraneo
-            if total > 0:
-                metrics['sla'] = ((local * 85.80) + (foraneo * 78.25)) / total
-            else:
-                metrics['sla'] = 0
-        except:
-            metrics['sla'] = 0
+        # Fallback: promedio ponderado
+        origen_counts = df['origen_del_servicio'].value_counts()
+        local = origen_counts.get('LOCAL', 0)
+        foraneo = origen_counts.get('FORANEO', 0)
+        total = local + foraneo
+        metrics['sla'] = ((local * 85.80) + (foraneo * 78.25)) / total if total > 0 else 0
     
-    # 3. NPS - Detección automática de escala
+    # 3. NPS - Vectorizado
     nps_col = next((c for c in df.columns if 'nps' in c.lower() and 'calificacion' in c.lower()), None)
     metrics['nps'] = 0
     
@@ -257,23 +245,15 @@ def calculate_metrics(df):
         nps_data = pd.to_numeric(df[nps_col], errors='coerce').dropna()
         if len(nps_data) > 0:
             max_val = nps_data.max()
-            
-            def categorize_nps(val):
-                if max_val <= 5:
-                    # Escala 1-5
-                    if val == 5: return 'PROMOTOR'
-                    if val == 4: return 'PASIVO'
-                    return 'DETRACTOR'
-                else:
-                    # Escala 0-10
-                    if val >= 9: return 'PROMOTOR'
-                    if val >= 7: return 'PASIVO'
-                    return 'DETRACTOR'
-            
-            categorias = nps_data.apply(categorize_nps)
-            prom = (categorias == 'PROMOTOR').sum() / len(categorias)
-            det = (categorias == 'DETRACTOR').sum() / len(categorias)
-            metrics['nps'] = (prom - det) * 100
+            if max_val <= 5:
+                # Escala 1-5
+                prom = (nps_data == 5).sum()
+                det = (nps_data <= 3).sum()
+            else:
+                # Escala 0-10
+                prom = (nps_data >= 9).sum()
+                det = (nps_data <= 6).sum()
+            metrics['nps'] = ((prom - det) / len(nps_data)) * 100
 
     return metrics
 
