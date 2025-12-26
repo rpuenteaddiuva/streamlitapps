@@ -127,6 +127,27 @@ def main():
         "📋 Metodología"
     ])
     
+    # Month filter
+    st.sidebar.divider()
+    st.sidebar.subheader("🗓️ Filtros")
+    
+    # Get unique months
+    all_months = sorted(df['mes'].dropna().unique().tolist())
+    selected_months = st.sidebar.multiselect(
+        "Seleccionar Mes(es)",
+        options=all_months,
+        default=all_months,
+        help="Filtra los datos por mes"
+    )
+    
+    # Apply filter
+    if selected_months:
+        df = df[df['mes'].isin(selected_months)]
+        # Recalculate metrics with filtered data
+        metrics = calculate_metrics(df)
+    
+    st.sidebar.caption(f"📊 {len(df):,} registros seleccionados")
+    
     # ==========================================================================
     # RESUMEN EJECUTIVO
     # ==========================================================================
