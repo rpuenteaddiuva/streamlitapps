@@ -70,26 +70,48 @@ def load_data():
     return None
 
 def calculate_metrics(df):
-    """Calcula KPIs 100% dinámicos basados en columnas del sistema"""
+    """Calcula KPIs 100% dinámicos desde datos crudos (Metodología V3)"""
     metrics = {}
     
     # 1. Total Servicios
     metrics['total_servicios'] = len(df)
     metrics['concluidos'] = len(df[df['status_del_servicio'].astype(str).str.contains('Concluido', case=False, na=False)])
     
-    # 2. SLA - Usar columnas de cumplimiento que están en el Excel
-    # Buscar columnas con "cumplimiento" y "vial" (que son las principales)
-    sla_cols = [c for c in df.columns if 'cumplimiento' in c.lower() and 'vial' in c.lower()]
+    # 2. SLA - Cálculo dinámico desde timestamps
+    # Paso 1: Filtros de exclusión
+    mask_concluido = df['status_del_servicio'].astype(str).str.contains('Concluido', case=False, na=False)
     
-    if sla_cols:
-        # Usar la primera columna de cumplimiento vial encontrada
-        sla_col = sla_cols[0]
-        sla_data = df[sla_col].astype(str).str.strip().str.upper()
-        cumple = (sla_data == 'CUMPLE').sum()
-        total_valid = sla_data.isin(['CUMPLE', 'NO CUMPLE']).sum()
-        metrics['sla'] = (cumple / total_valid * 100) if total_valid > 0 else 0
+    # Buscar columna de servicios programados
+    prog_col = next((c for c in df.columns if 'programad' in c.lower()), None)
+    if prog_col:
+        mask_no_prog = df[prog_col].astype(str).str.lower() != 'si'
     else:
-        # Fallback: promedio ponderado LOCAL/FORANEO
+        mask_no_prog = pd.Series([True] * len(df), index=df.index)
+    
+    df_sla = df[mask_concluido & mask_no_prog].copy()
+    
+    # Paso 2: Calcular duración si existe columna duracion_minutos
+    if 'duracion_minutos' in df_sla.columns:
+        # Paso 3: Aplicar umbrales según origen
+        def evaluar_sla(row):
+            duracion = row['duracion_minutos']
+            if pd.isna(duracion):
+                return None
+            origen = str(row.get('origen_del_servicio', '')).upper()
+            # Umbral: LOCAL=45min, FORANEO=90min
+            limite = 90 if 'FORAN' in origen else 45
+            return 'CUMPLE' if duracion <= limite else 'NO CUMPLE'
+        
+        df_sla['estado_sla'] = df_sla.apply(evaluar_sla, axis=1)
+        df_valid = df_sla[df_sla['estado_sla'].notnull()]
+        
+        if len(df_valid) > 0:
+            cumple = (df_valid['estado_sla'] == 'CUMPLE').sum()
+            metrics['sla'] = (cumple / len(df_valid)) * 100
+        else:
+            metrics['sla'] = 0
+    else:
+        # Fallback: promedio ponderado si no hay duracion_minutos
         try:
             origen_counts = df['origen_del_servicio'].value_counts()
             local = origen_counts.get('LOCAL', 0)
@@ -102,19 +124,26 @@ def calculate_metrics(df):
         except:
             metrics['sla'] = 0
     
-    # 3. NPS - Categorización híbrida exacta de auditoría
+    # 3. NPS - Detección automática de escala
     nps_col = next((c for c in df.columns if 'nps' in c.lower() and 'calificacion' in c.lower()), None)
     metrics['nps'] = 0
     
     if nps_col:
         nps_data = pd.to_numeric(df[nps_col], errors='coerce').dropna()
         if len(nps_data) > 0:
+            max_val = nps_data.max()
+            
             def categorize_nps(val):
-                if val == 10: return 'PROMOTOR'
-                if val >= 7: return 'PASIVO'
-                if val == 5: return 'PROMOTOR'
-                if val == 4: return 'PASIVO'
-                return 'DETRACTOR'
+                if max_val <= 5:
+                    # Escala 1-5
+                    if val == 5: return 'PROMOTOR'
+                    if val == 4: return 'PASIVO'
+                    return 'DETRACTOR'
+                else:
+                    # Escala 0-10
+                    if val >= 9: return 'PROMOTOR'
+                    if val >= 7: return 'PASIVO'
+                    return 'DETRACTOR'
             
             categorias = nps_data.apply(categorize_nps)
             prom = (categorias == 'PROMOTOR').sum() / len(categorias)
