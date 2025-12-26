@@ -16,40 +16,156 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS
+# Modern Custom CSS with Glassmorphism and Gradients
 st.markdown("""
 <style>
+    /* Import Google Font */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    
+    /* Global Styles */
+    .stApp {
+        font-family: 'Inter', sans-serif;
+    }
+    
+    /* Main Header with Gradient */
     .main-header {
-        font-size: 2.5rem;
-        color: #0055a6;
-        font-weight: bold;
+        font-size: 2.8rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #0055a6, #00a6e6);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
         text-align: center;
-        padding: 1rem;
+        padding: 1.5rem 0;
+        margin-bottom: 1rem;
     }
-    .metric-card {
-        background: linear-gradient(135deg, #0055a6, #4a90d9);
-        padding: 1.5rem;
-        border-radius: 10px;
-        color: white;
-        text-align: center;
-    }
+    
+    /* Section Headers */
     .section-header {
         color: #0055a6;
-        border-bottom: 3px solid #0055a6;
-        padding-bottom: 0.5rem;
-        margin-top: 2rem;
+        font-weight: 600;
+        font-size: 1.8rem;
+        border-bottom: 3px solid;
+        border-image: linear-gradient(90deg, #0055a6, #00a6e6) 1;
+        padding-bottom: 0.75rem;
+        margin: 2rem 0 1.5rem 0;
     }
+    
+    /* Glassmorphism Cards */
+    .glass-card {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        border-radius: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        padding: 1.5rem;
+        box-shadow: 0 8px 32px rgba(0, 85, 166, 0.1);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    
+    .glass-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 40px rgba(0, 85, 166, 0.2);
+    }
+    
+    /* Metric Improvements */
+    [data-testid="stMetric"] {
+        background: linear-gradient(135deg, rgba(0, 85, 166, 0.05), rgba(0, 166, 230, 0.05));
+        border-radius: 12px;
+        padding: 1rem !important;
+        border: 1px solid rgba(0, 85, 166, 0.1);
+        transition: all 0.3s ease;
+    }
+    
+    [data-testid="stMetric"]:hover {
+        background: linear-gradient(135deg, rgba(0, 85, 166, 0.1), rgba(0, 166, 230, 0.1));
+        border-color: rgba(0, 85, 166, 0.2);
+    }
+    
+    [data-testid="stMetricLabel"] {
+        font-weight: 600;
+        color: #0055a6 !important;
+    }
+    
+    [data-testid="stMetricValue"] {
+        font-size: 2rem !important;
+        font-weight: 700;
+        color: #1a1a2e !important;
+    }
+    
+    /* Positive/Negative Delta Colors */
+    [data-testid="stMetricDelta"] svg {
+        width: 1rem;
+        height: 1rem;
+    }
+    
+    /* Sidebar Styling */
+    [data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #0055a6 0%, #003366 100%);
+    }
+    
+    [data-testid="stSidebar"] .stMarkdown {
+        color: white;
+    }
+    
+    [data-testid="stSidebar"] h1, [data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3 {
+        color: white !important;
+    }
+    
+    /* DataFrames */
+    .stDataFrame {
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    }
+    
+    /* Buttons */
+    .stButton > button {
+        background: linear-gradient(135deg, #0055a6, #00a6e6);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        padding: 0.5rem 1.5rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .stButton > button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0, 85, 166, 0.4);
+    }
+    
+    /* Dividers */
+    hr {
+        border: none;
+        height: 2px;
+        background: linear-gradient(90deg, transparent, #0055a6, transparent);
+        margin: 2rem 0;
+    }
+    
+    /* Info/Warning boxes */
+    .stAlert {
+        border-radius: 12px;
+        border-left: 4px solid #0055a6;
+    }
+    
+    /* Hide Streamlit branding */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
 </style>
 """, unsafe_allow_html=True)
 
-# Color palette
+# Modern Color Palette
 COLORS = {
     'primary': '#0055a6',
+    'primary_light': '#00a6e6',
     'secondary': '#4a90d9',
-    'success': '#2e7d32',
-    'warning': '#ffc107',
-    'danger': '#e53935',
-    'purple': '#6a1b9a',
+    'success': '#00c853',
+    'success_dark': '#2e7d32',
+    'warning': '#ffab00',
+    'danger': '#ff5252',
+    'purple': '#7c4dff',
+    'dark': '#1a1a2e',
+    'light': '#f8f9fa',
 }
 
 @st.cache_data
