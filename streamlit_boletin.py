@@ -90,27 +90,29 @@ def calculate_metrics(df):
         
     df_sla = df[mask_status & mask_prog].copy()
     
-    # Buscar columnas de cumplimiento del sistema
-    cols_cumple = [c for c in df_sla.columns if 'cumplimiento' in c.lower() and 'vial' in c.lower()]
+    # Buscar columnas de cumplimiento del sistema (incluir columnas con newlines)
+    cols_cumple = [c for c in df_sla.columns if 'cumplimiento' in c.lower().replace('\n', ' ')]
     
     if cols_cumple:
         # Usar columna de cumplimiento del sistema
         col_target = cols_cumple[0]
-        cumple = len(df_sla[df_sla[col_target].astype(str).str.contains('CUMPLE', case=False, na=False) & 
-                           ~df_sla[col_target].astype(str).str.contains('NO CUMPLE', case=False, na=False)])
-        total_sla = len(df_sla[df_sla[col_target].notna()])
+        sla_values = df_sla[col_target].astype(str).str.strip().str.upper()
+        # Contar exactamente "CUMPLE" (no "NO CUMPLE")
+        cumple = len(sla_values[sla_values == 'CUMPLE'])
+        total_sla = len(sla_values[sla_values.isin(['CUMPLE', 'NO CUMPLE'])])
     elif 'estado_sla' in df_sla.columns:
         cumple = len(df_sla[df_sla['estado_sla'] == 'CUMPLE'])
         total_sla = len(df_sla)
     else:
         # Fallback: calcular basado en duración
         if 'duracion_minutos' in df_sla.columns:
-            df_sla['sla_check'] = df_sla.apply(
-                lambda r: r['duracion_minutos'] <= (45 if str(r.get('origen_del_servicio', '')).upper() == 'LOCAL' else 90), 
-                axis=1
-            )
-            cumple = df_sla['sla_check'].sum()
-            total_sla = len(df_sla)
+            df_local = df_sla[df_sla['origen_del_servicio'].astype(str).str.upper() == 'LOCAL']
+            df_foraneo = df_sla[df_sla['origen_del_servicio'].astype(str).str.upper() == 'FORANEO']
+            
+            cumple_local = len(df_local[df_local['duracion_minutos'] <= 45])
+            cumple_foraneo = len(df_foraneo[df_foraneo['duracion_minutos'] <= 90])
+            cumple = cumple_local + cumple_foraneo
+            total_sla = len(df_local) + len(df_foraneo)
         else:
             cumple = 0
             total_sla = 0
