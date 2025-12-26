@@ -479,10 +479,14 @@ def main():
             return True
         
         mask_otros = df['tipo_de_servicio'].apply(is_otros)
+        excluded_types = df[mask_otros]['tipo_de_servicio'].unique().tolist()
         df_excluded_count = mask_otros.sum()
         df = df[~mask_otros]
+        
         if df_excluded_count > 0:
-            st.sidebar.caption(f"ℹ️ Se han filtrado {df_excluded_count} servicios 'Otros'")
+            st.sidebar.caption(f"ℹ️ Se han filtrado {df_excluded_count} servicios calculados como 'Otros'")
+            with st.sidebar.expander("Ver categorías excluidas"):
+                st.write(sorted([str(x) for x in excluded_types]))
 
     # --- CAPTURE HISTORY (Context filtered, but ALL months) ---
     df_unfiltered = df.copy()
