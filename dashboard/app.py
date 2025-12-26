@@ -837,6 +837,12 @@ def main():
             
         df_table = pd.DataFrame(table_data, columns=columns_struct)
         
+        # --- DEBUG SECTION (Remove after fixing) ---
+        # st.error("Debugging Active")
+        # st.write(f"Data source shape: {df_unfiltered.shape}")
+        # st.write("Preview of generated table data:", df_table.head())
+        # -------------------------------------------
+
         # Style
         def style_table(val):
             # Basic styling logic
@@ -847,22 +853,33 @@ def main():
                         num = float(val.replace('%', ''))
                         # Heuristic: >80 is usually green/yellow, <5 is green (for abandonment/quejas)
                         if num < 5: 
-                            return 'background-color: #c8e6c9; color: black' if num <= 1.5 else 'background-color: #ffcdd2; color: black'
+                            # Abandono/Quejas: Low is Good
+                            if num <= 1.5: return 'background-color: #c8e6c9; color: black' # Green
+                            else: return 'background-color: #ffcdd2; color: black' # Red
                         else:
-                            if num >= 86.5: return 'background-color: #c8e6c9; color: black'
-                            elif num >= 80: return 'background-color: #fff9c4; color: black'
-                            else: return 'background-color: #ffcdd2; color: black'
+                            # SLAs/NS: High is Good
+                            if num >= 86.5: return 'background-color: #c8e6c9; color: black' # Green
+                            elif num >= 80: return 'background-color: #fff9c4; color: black' # Yellow
+                            else: return 'background-color: #ffcdd2; color: black' # Red
                     except: pass
                 if '$' in val:
                      return 'color: black' # Ensure readable if styled row
             return ''
 
-        try:
-            st.dataframe(df_table.style.applymap(style_table),
-                        use_container_width=True, hide_index=True)
-        except Exception as e:
-            st.error(f"Error renderizando estilos: {e}")
-            st.dataframe(df_table, use_container_width=True, hide_index=True)
+        # Render with safer fallback
+        if df_table.empty:
+            st.warning("⚠️ La tabla de indicadores está vacía. Verifica los datos.")
+        else:
+            try:
+                # Use map if available (pandas >= 2.1.0), else applymap
+                styler = df_table.style
+                if hasattr(styler, 'map'):
+                    st.dataframe(styler.map(style_table), use_container_width=True, hide_index=True)
+                else:
+                    st.dataframe(styler.applymap(style_table), use_container_width=True, hide_index=True)
+            except Exception as e:
+                st.error(f"Error visualizando estilos: {e}")
+                st.dataframe(df_table, use_container_width=True, hide_index=True)
         
         st.caption("Nota: Los valores de Coordinación, NS, Abandono y Recobros son simulados o externos a la BBDD actual.")
     
