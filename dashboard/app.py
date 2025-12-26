@@ -436,17 +436,6 @@ def main():
     # Calculate metrics with filtered data
     metrics = calculate_metrics(df)
     
-    # Calculate weighted SLA for comparison
-    try:
-        origen_counts = df['origen_del_servicio'].value_counts()
-        local = origen_counts.get('LOCAL', 0)
-        foraneo = origen_counts.get('FORANEO', 0)
-        total = local + foraneo
-        sla_ponderado = ((local * 85.80) + (foraneo * 78.25)) / total if total > 0 else 0
-    except:
-        sla_ponderado = 0
-    metrics['sla_ponderado'] = sla_ponderado
-    
     st.sidebar.divider()
     st.sidebar.caption(f"📊 **{len(df):,}** registros seleccionados")
     
@@ -466,14 +455,8 @@ def main():
             target_sla = 86.5
             val_sla = metrics['sla']
             delta_sla = val_sla - target_sla
-            st.metric(f"⏱️ SLA Calculado", f"{val_sla:.1f}%", delta=f"{delta_sla:.1f}%", help="Calculado desde timestamps crudos")
+            st.metric(f"⏱️ SLA (Meta {target_sla}%)", f"{val_sla:.1f}%", delta=f"{delta_sla:.1f}%", help="Calculado desde BBDD")
         with col4:
-            val_sla_pond = metrics.get('sla_ponderado', 0)
-            delta_pond = val_sla_pond - target_sla
-            st.metric(f"📊 SLA Ponderado", f"{val_sla_pond:.1f}%", delta=f"{delta_pond:.1f}%", help="Promedio ponderado TIEMPO sheet")
-        
-        col5, col6, col7, col8 = st.columns(4)
-        with col5:
             target_nps = 82.1
             val_nps = metrics['nps']
             delta_nps = val_nps - target_nps
@@ -666,33 +649,105 @@ def main():
     elif "Indicadores" in selected_section:
         st.markdown('<h2 class="section-header">Indicadores Mensuales</h2>', unsafe_allow_html=True)
         
-        # Create indicators table (hardcoded from TIEMPO sheet)
-        indicators = {
-            'Indicador': ['% Cumplimiento NS', '% Máx. Abandono', 'Coordinación', 
-                         'Contacto Vial-Urbano', 'Contacto Vial-Rural', '% Quejas'],
-            'Punto de Control': ['Mínimo 90%', 'Máximo 1%', 'Mínimo 85% / 10 min',
-                                'Mínimo 86.50% / 45 min', 'Mínimo 86.50% / 90 min', 'Máximo 1%'],
-            'Ago-25': ['99.04%', '0.07%', '85.04%', '87.14%', '89.81%', '0.99%'],
-            'Sep-25': ['98.47%', '0.08%', '85.27%', '86.57%', '86.87%', '1.19%'],
-            'Oct-25': ['97.30%', '0.17%', '86.38%', '86.86%', '87.19%', '0.37%'],
+    elif "Indicadores" in selected_section:
+        st.markdown('<h2 class="section-header">Indicadores Mensuales</h2>', unsafe_allow_html=True)
+        
+        # Calculate dynamic SLA for last 3 months
+        # Filter for months in data
+        months_order = ['Ago-25', 'Sep-25', 'Oct-25']
+        
+        # Initialize dictionary with hardcoded Call Center metrics (not in BBDD)
+        data = {
+            'Indicador': ['% Cumplimiento NS (Call Center)', '% Máx. Abandono (Call Center)', '% Quejas', 
+                         'SLA Global', 'SLA Vial Urbano', 'SLA Vial Rural (Foráneo)'],
+            'Punto de Control': ['Mínimo 90%', 'Máximo 1%', 'Máximo 1%',
+                                'Mínimo 86.5%', 'Mínimo 86.50% / 45 min', 'Mínimo 86.50% / 90 min']
         }
         
-        df_ind = pd.DataFrame(indicators)
+        for month in months_order:
+            data[month] = []
+            
+            # 1-3. Hardcoded / External metrics (placeholder or keep previous values if available)
+            # Using placeholders or maintaining previous hardcoded values if they were provided externally
+            # For now, keeping the values from the image/previous code as they likely come from another source
+            if month == 'Ago-25':
+                data[month].extend(['99.04%', '0.07%', '0.99%'])
+            elif month == 'Sep-25':
+                data[month].extend(['98.47%', '0.08%', '1.19%'])
+            elif month == 'Oct-25':
+                data[month].extend(['97.30%', '0.17%', '0.37%'])
+            else:
+                data[month].extend(['-', '-', '-'])
+            
+            # Calculate Dynamic SLA from BBDD
+            df_m = df[df['mes'] == month]
+            if len(df_m) > 0:
+                metrics_m = calculate_metrics(df_m)
+                sla_global = metrics_m['sla']
+                
+                # Recalculate specific breakdowns
+                # Urbano vs Rural
+                # We need to reuse the logic inside calculate_metrics but specific for Origin
+                # Or just do a quick calc here
+                mask_conc = df_m['status_del_servicio'].astype(str).str.contains('Concluido', case=False, na=False)
+                prog_col = next((c for c in df_m.columns if 'programad' in c.lower()), None)
+                if prog_col:
+                     mask_no_prog = df_m[prog_col].astype(str).str.lower() != 'si'
+                else:
+                     mask_no_prog = True
+                
+                df_sla = df_m[mask_conc & mask_no_prog]
+                
+                def calc_sla_subset(sub_df, is_foraneo):
+                    if len(sub_df) == 0: return 0
+                    if 'duracion_minutos' not in sub_df.columns: return 0
+                    
+                    limite = 90 if is_foraneo else 45
+                    dur = pd.to_numeric(sub_df['duracion_minutos'], errors='coerce')
+                    valid = dur.notnull()
+                    if valid.sum() == 0: return 0
+                    
+                    cumple = (dur[valid] <= limite).sum()
+                    return (cumple / valid.sum()) * 100
+
+                # Urbano (LOCAL)
+                urbano_mask = df_sla['origen_del_servicio'].astype(str).str.upper() == 'LOCAL'
+                sla_urbano = calc_sla_subset(df_sla[urbano_mask], False)
+                
+                # Rural (FORANEO)
+                rural_mask = df_sla['origen_del_servicio'].astype(str).str.upper().str.contains('FORAN')
+                sla_rural = calc_sla_subset(df_sla[rural_mask], True)
+                
+                data[month].extend([f"{sla_global:.2f}%", f"{sla_urbano:.2f}%", f"{sla_rural:.2f}%"])
+            else:
+                 data[month].extend(['-', '-', '-'])
+
+        df_ind = pd.DataFrame(data)
         
-        # Style function for conditional formatting
+        # Style function for conditional formatting with CONTRAST FIX
         def highlight_cells(val):
             try:
-                num = float(val.replace('%', ''))
-                if num >= 86.5:
-                    return 'background-color: #c8e6c9'
-                elif num >= 80:
-                    return 'background-color: #fff9c4'
-                else:
-                    return 'background-color: #ffcdd2'
+                if isinstance(val, str) and '%' in val:
+                    num = float(val.replace('%', ''))
+                    # Different rules for Abandono/Quejas (lower is better)
+                    is_inverse = False # logic to detect row? styled applymap is cell by cell.
+                    # Simplified logic: High is good (SLA), Low is good (Quejas/Abandono)
+                    # This function is applied to all month columns. 
+                    # Use a simpler approach: Apply style based on value range assuming standard SLA > 80
+                    # For small numbers (abandono/quejas < 5), we assume green if low.
+                    
+                    if num < 5: # Likely Abandono/Quejas
+                        if num <= 1.0: return 'background-color: #c8e6c9; color: black;' # Green
+                        else: return 'background-color: #ffcdd2; color: black;' # Red
+                    else: # Likely SLA/NS
+                        if num >= 86.5: return 'background-color: #c8e6c9; color: black;' # Green
+                        elif num >= 80: return 'background-color: #fff9c4; color: black;' # Yellow
+                        else: return 'background-color: #ffcdd2; color: black;' # Red
+                return ''
             except:
                 return ''
         
-        st.dataframe(df_ind.style.applymap(highlight_cells, subset=['Ago-25', 'Sep-25', 'Oct-25']),
+        st.dataframe(df_ind.style.applymap(highlight_cells, subset=months_order),
                     use_container_width=True, hide_index=True)
         
         st.markdown("""
@@ -787,28 +842,14 @@ def main():
         st.markdown("""
         ### Cálculo de SLA (Service Level Agreement)
         
-        Este dashboard muestra **dos métricas de SLA:**
+        **Fuente Única de Verdad:** Hoja `BBDD` (Servicios Brindados).
         
-        #### 1. SLA Calculado (Timestamps Crudos)
-        Calculado directamente desde la diferencia entre `Fec_Contacto` y `Fec_Asignacion`.
-        
+        **Fórmula:**
         ```
-        SLA Calculado = (Servicios dentro de umbral / Total Válidos) × 100
+        SLA = (Servicios Cumple / Total Servicios Válidos) × 100
         ```
         
-        **Nota:** Este cálculo usa tiempo 24/7 sin "Stop the Clock", por lo que suele dar valores menores (~65-75%).
-        
-        #### 2. SLA Ponderado (Hoja TIEMPO)
-        Promedio ponderado usando valores pre-calculados de la hoja TIEMPO, que incluyen 
-        reglas de negocio como "Stop the Clock" (pausar tiempo en esperas del cliente).
-        
-        ```
-        SLA Ponderado = (Local × 85.80% + Foráneo × 78.25%) / Total
-        ```
-        
-        **Valores base:** LOCAL=85.80%, FORANEO=78.25% (de hoja TIEMPO)
-        
-        ---
+        El cálculo se realiza **registro por registro** comparando la duración real del servicio contra el umbral establecido para su tipo y zona.
         
         **Umbrales por Tipo de Servicio:**
         | Tipo | Local | Foráneo |
@@ -820,6 +861,7 @@ def main():
         - Servicios Programados (`servicios_programados = "No"`)
         - Estados: Cancelado, Fallida, Anulado
         - Keywords en motivos: Cita, Agendada, Programada, Posterior
+        - Categoría "Otros" (Médico, Hogar, etc.) se excluye del análisis core.
         
         ---
         
