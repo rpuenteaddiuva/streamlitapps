@@ -169,11 +169,15 @@ def calculate_monthly_kpis(df):
             concluidos = group_valid[group_valid[status_col].astype(str).str.contains('Concluido', case=False, na=False)].shape[0]
             metrics['ns'] = (concluidos / total_valid * 100) if total_valid > 0 else 0
             
-            # 2. % Máximo de Abandono (Cancelados / Total Válido)
-            # Se excluyen Anulado, Abortado, Duplicado, Prueba del denominador
-            mask_abandono = group_valid[status_col].astype(str).str.contains('Cancelado|Abandono', case=False, na=False)
+            # 2. % Máximo de Abandono (Cancelados / Total sin Anulado/Abortado/Duplicado/Prueba)
+            # Contar abandonos del grupo original (incluye Cancelados)
+            mask_abandono = group[status_col].astype(str).str.contains('Cancelado|Abandono', case=False, na=False)
             abandonos = mask_abandono.sum()
-            metrics['abandono'] = (abandonos / total_valid * 100) if total_valid > 0 else 0
+            # Denominador: excluir solo Anulado, Abortado, Duplicado, Prueba (NO Cancelados)
+            exclusions_abandono = ['Anulado', 'Abortado', 'Duplicado', 'Prueba']
+            mask_valid_abandono = ~group[status_col].astype(str).isin(exclusions_abandono)
+            total_valid_abandono = mask_valid_abandono.sum()
+            metrics['abandono'] = (abandonos / total_valid_abandono * 100) if total_valid_abandono > 0 else 0
         else:
             metrics['ns'] = 0
             metrics['abandono'] = 0
