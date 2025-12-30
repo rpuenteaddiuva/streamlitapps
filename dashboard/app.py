@@ -127,81 +127,11 @@ def load_css():
         padding-top: 2rem;
     }
 
-    /* ===== DATAFRAMES & TABLES - COMPREHENSIVE DARK THEME ===== */
+    /* ===== DATAFRAMES & TABLES ===== */
     .stDataFrame {
         border: 1px solid var(--border);
         border-radius: 8px;
         overflow: hidden;
-    }
-    
-    /* Target the actual data grid container */
-    .stDataFrame > div,
-    .stDataFrame iframe,
-    [data-testid="stDataFrame"] > div,
-    [data-testid="stDataFrame"] iframe {
-        background-color: var(--bg-card) !important;
-    }
-    
-    /* Glide data grid (Streamlit's internal table component) */
-    .glideDataEditor,
-    .dvn-scroller,
-    .dvn-underlay,
-    .gdg-style {
-        background-color: var(--bg-card) !important;
-    }
-    
-    /* All table elements */
-    table, .stTable, .dataframe {
-        background-color: var(--bg-card) !important;
-        color: var(--text-primary) !important;
-    }
-    
-    /* Table headers */
-    th, thead th, .stDataFrame th, 
-    [data-testid="stTable"] th {
-        background-color: #1a1f25 !important;
-        color: var(--accent) !important;
-        font-weight: 600;
-        border-bottom: 2px solid var(--border) !important;
-    }
-    
-    /* Table cells */
-    td, tbody td, .stDataFrame td,
-    [data-testid="stTable"] td {
-        background-color: var(--bg-card) !important;
-        color: var(--text-primary) !important;
-        border-bottom: 1px solid var(--border) !important;
-    }
-    
-    /* Alternate row colors */
-    tbody tr:nth-child(even) td,
-    .stDataFrame tbody tr:nth-child(even) td {
-        background-color: rgba(31, 142, 241, 0.05) !important;
-    }
-    
-    /* Row hover */
-    tbody tr:hover td {
-        background-color: rgba(31, 142, 241, 0.1) !important;
-    }
-    
-    /* Styled HTML tables (used by st.write with dataframes) */
-    .element-container table {
-        background-color: var(--bg-card) !important;
-        border-collapse: collapse;
-        width: 100%;
-    }
-    
-    .element-container table th {
-        background-color: #1a1f25 !important;
-        color: var(--accent) !important;
-        padding: 12px 8px !important;
-        text-align: left;
-    }
-    
-    .element-container table td {
-        background-color: var(--bg-card) !important;
-        color: var(--text-primary) !important;
-        padding: 10px 8px !important;
     }
     
 
@@ -810,7 +740,6 @@ def main():
     # ==========================================================================
     elif "Indicadores" in selected_section:
         st.markdown('<h2 class="section-header">Indicadores Mensuales</h2>', unsafe_allow_html=True)
-        st.warning("⚠️ MODO DEBUG ACTIVADO: Si ves esto, el bloque de código se está ejecutando.")
         
         try:
             # 1. Prepare Columns Structure (Months + Quarterly Avgs)
