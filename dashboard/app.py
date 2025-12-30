@@ -742,13 +742,13 @@ def main():
         st.markdown('<h2 class="section-header">Indicadores Mensuales</h2>', unsafe_allow_html=True)
         
         try:
-            # 1. Prepare Columns Structure (Months + Quarterly Avgs)
+            # 1. Prepare Columns Structure (Months + Quarterly Avgs + Total)
             columns_struct = [
                 'INDICADOR', 'PUNTO DE CONTROL',
                 'Ene-25', 'Feb-25', 'Mar-25', 'PROMEDIO 1er. TRIMESTRE',
                 'Abr-25', 'May-25', 'Jun-25', 'PROMEDIO 2do. TRIMESTRE',
                 'Jul-25', 'Ago-25', 'Sep-25', 'PROMEDIO 3er. TRIMESTRE',
-                'Oct-25'
+                'Oct-25', 'PROMEDIO TOTAL'
             ]
             
             # --- CALCULO DE INDICADORES MENSUALES (Desde metrics.py) ---
@@ -843,12 +843,21 @@ def main():
                          except: pass
                 
                 # Compute Averages
+                all_values = []  # Para promedio total
                 for t in [1, 2, 3]:
                     if values_for_avg[t]:
                         avg = sum(values_for_avg[t]) / len(values_for_avg[t])
                         row[f'PROMEDIO {t}er. TRIMESTRE' if t!=2 else f'PROMEDIO {t}do. TRIMESTRE'] = f"{avg:.2f}%"
+                        all_values.extend(values_for_avg[t])
                     else:
                         row[f'PROMEDIO {t}er. TRIMESTRE' if t!=2 else f'PROMEDIO {t}do. TRIMESTRE'] = "-"
+                
+                # Compute Total Average (all months)
+                if all_values:
+                    total_avg = sum(all_values) / len(all_values)
+                    row['PROMEDIO TOTAL'] = f"{total_avg:.2f}%"
+                else:
+                    row['PROMEDIO TOTAL'] = "-"
                         
                 table_data.append(row)
                 
@@ -879,6 +888,36 @@ def main():
                          return 'color: black' # Ensure readable if styled row
                 return ''
 
+            # CSS for sticky columns
+            sticky_css = """
+            <style>
+            /* Make first two columns sticky */
+            [data-testid="stDataFrame"] table {
+                display: block;
+                overflow-x: auto;
+            }
+            [data-testid="stDataFrame"] th:nth-child(1),
+            [data-testid="stDataFrame"] td:nth-child(1) {
+                position: sticky;
+                left: 0;
+                background-color: #1e1e1e;
+                z-index: 2;
+            }
+            [data-testid="stDataFrame"] th:nth-child(2),
+            [data-testid="stDataFrame"] td:nth-child(2) {
+                position: sticky;
+                left: 150px;
+                background-color: #1e1e1e;
+                z-index: 2;
+            }
+            [data-testid="stDataFrame"] th:nth-child(1),
+            [data-testid="stDataFrame"] th:nth-child(2) {
+                z-index: 3;
+            }
+            </style>
+            """
+            st.markdown(sticky_css, unsafe_allow_html=True)
+            
             # Render with safer fallback
             if df_table.empty:
                 st.warning("⚠️ La tabla de indicadores está vacía. Verifica los datos.")
