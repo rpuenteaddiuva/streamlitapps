@@ -1,0 +1,45 @@
+Loading resultados/analyzed_bbdd.xlsx...
+
+--- NPS Stats (nps_calificacion_cliente) ---
+nps_calificacion_cliente
+0.0       15
+1.0       13
+2.0        6
+3.0        9
+4.0        7
+5.0       57
+6.0       10
+7.0       62
+8.0      211
+9.0      389
+10.0    3474
+Name: count, dtype: int64
+
+--- SLA Diagnosis ---
+Total Valid Rows: 7272
+Duration Stats (Minutes):
+count     7272.000000
+mean       193.612695
+std       1073.160809
+min          0.000000
+25%         23.145833
+50%         41.808333
+75%         91.133333
+max      45990.633333
+Name: duracion_minutos, dtype: float64
+
+Sample NO CUMPLE (Standard 45m threshold):
+Count > 45m: 3404 (46.8%)
+    duracion_minutos  ... status_del_servicio
+9         804.416667  ...           Concluido
+15        491.416667  ...           Concluido
+16         45.850000  ...           Concluido
+20         57.500000  ...           Concluido
+21        147.766667  ...           Concluido
+29        224.833333  ...           Concluido
+34         75.800000  ...           Concluido
+35         59.433333  ...           Concluido
+45        137.833333  ...           Concluido
+48         69.000000  ...           Concluido
+
+[10 rows x 4 columns]

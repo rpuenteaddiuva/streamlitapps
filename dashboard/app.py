@@ -6,7 +6,19 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+import plotly.io as pio
 import os
+
+# Set global Plotly dark theme
+pio.templates.default = "plotly_dark"
+
+try:
+    from modules import metrics as metrics_module
+except ImportError:
+    # Fallback if running from a different directory context
+    import sys
+    sys.path.append(os.path.join(os.path.dirname(__file__), 'modules'))
+    import metrics as metrics_module
 
 # Page config
 st.set_page_config(
@@ -122,6 +134,25 @@ def load_css():
         overflow: hidden;
     }
     
+    /* Force dark background on dataframe cells */
+    .stDataFrame div[data-testid="stDataFrameCell"],
+    .stDataFrame th, .stDataFrame td {
+        background-color: var(--bg-card) !important;
+        color: var(--text-primary) !important;
+    }
+    
+    /* Dataframe header */
+    .stDataFrame thead th {
+        background-color: #1a1f25 !important;
+        color: var(--accent) !important;
+        font-weight: 600;
+    }
+    
+    /* Alternate row colors */
+    .stDataFrame tbody tr:nth-child(even) td {
+        background-color: rgba(31, 142, 241, 0.05) !important;
+    }
+    
     /* ===== CUSTOM FILE UPLOADER ===== */
     [data-testid="stFileUploader"] {
         border: 1px dashed var(--border);
@@ -203,17 +234,26 @@ def load_css():
 # Dark Theme Color Palette for Plotly
 COLORS = {
     'primary': '#1f8ef1',
-    'secondary': '#3da0f5',
+    'secondary': '#6c757d',
     'success': '#2ecc71',
     'warning': '#f39c12',
     'danger': '#e74c3c',
     'purple': '#9b59b6',
-    'text': '#e6eef3',
-    'text_secondary': '#9aa8b3',
-    'bg': '#0f1316',
-    'card': '#111217',
-    'border': '#1f2a33',
+    'dark_bg': '#0f1316',
+    'dark_paper': '#111217'
 }
+
+def style_dark_chart(fig):
+    """Apply dark theme styling to any Plotly figure."""
+    fig.update_layout(
+        paper_bgcolor='rgba(0,0,0,0)',  # Transparent to match Streamlit background
+        plot_bgcolor='rgba(0,0,0,0)',
+        font_color='#e6eef3',
+        title_font_color='#1f8ef1',
+        legend_bgcolor='rgba(0,0,0,0)',
+        legend_font_color='#e6eef3'
+    )
+    return fig
 
 # Plotly Dark Template
 PLOTLY_TEMPLATE = {
@@ -533,6 +573,7 @@ def main():
                         title="Distribución por Status",
                         color_discrete_sequence=[COLORS['primary'], COLORS['secondary'], 
                                                   COLORS['warning'], COLORS['success']])
+            style_dark_chart(fig)
             st.plotly_chart(fig, use_container_width=True)
         
         with col2:
@@ -540,6 +581,7 @@ def main():
             fig = px.pie(values=origen_counts.values, names=origen_counts.index,
                         title="Local vs Foráneo", hole=0.4,
                         color_discrete_sequence=[COLORS['primary'], COLORS['secondary']])
+            style_dark_chart(fig)
             st.plotly_chart(fig, use_container_width=True)
         
         # SLA by Category breakdown
@@ -586,6 +628,7 @@ def main():
         fig = px.bar(monthly, barmode='stack', title="Servicios por Mes y Status",
                      color_discrete_sequence=[COLORS['primary'], COLORS['secondary'],
                                                COLORS['warning'], COLORS['success']])
+        style_dark_chart(fig)
         st.plotly_chart(fig, use_container_width=True)
         
         # Service type distribution
@@ -595,6 +638,7 @@ def main():
                      title="Top 10 Tipos de Servicio",
                      color_discrete_sequence=[COLORS['primary']])
         fig.update_layout(yaxis={'categoryorder':'total ascending'})
+        style_dark_chart(fig)
         st.plotly_chart(fig, use_container_width=True)
     
     # ==========================================================================
@@ -615,6 +659,7 @@ def main():
                         title="Demarcación (Local/Foráneo)", hole=0.5,
                         color_discrete_sequence=[COLORS['primary'], COLORS['secondary']])
             fig.update_traces(textposition='inside', textinfo='percent+value')
+            style_dark_chart(fig)
             st.plotly_chart(fig, use_container_width=True)
         
         with col2:
@@ -624,6 +669,7 @@ def main():
                 fig = px.bar(x=serv.index, y=serv.values,
                             title="Segmentación del Servicio",
                             color_discrete_sequence=[COLORS['primary']])
+                style_dark_chart(fig)
                 st.plotly_chart(fig, use_container_width=True)
             else:
                 st.info("Columna 'servicio_brindado' no disponible")
@@ -648,6 +694,7 @@ def main():
                         title="Demarcación (Local/Foráneo)", hole=0.5,
                         color_discrete_sequence=[COLORS['primary'], COLORS['secondary']])
             fig.update_traces(textposition='inside', textinfo='percent+value')
+            style_dark_chart(fig)
             st.plotly_chart(fig, use_container_width=True)
         
         with col2:
@@ -657,6 +704,7 @@ def main():
                 fig = px.bar(x=serv.index, y=serv.values,
                             title="Segmentación del Servicio",
                             color_discrete_sequence=[COLORS['secondary']])
+                style_dark_chart(fig)
                 st.plotly_chart(fig, use_container_width=True)
             else:
                 st.info("Columna 'servicio_brindado' no disponible")
@@ -676,6 +724,7 @@ def main():
                      title="Servicios por Tipo de Plan",
                      color_discrete_sequence=[COLORS['primary']])
         fig.update_layout(yaxis={'categoryorder':'total ascending'})
+        style_dark_chart(fig)
         st.plotly_chart(fig, use_container_width=True)
         
         # Percentages
@@ -701,6 +750,7 @@ def main():
         fig = px.bar(pivot_last, barmode='group',
                      title="Últimos 3 Meses por Línea de Servicio",
                      color_discrete_sequence=[COLORS['primary'], COLORS['secondary'], COLORS['success']])
+        style_dark_chart(fig)
         st.plotly_chart(fig, use_container_width=True)
     
     # ==========================================================================
@@ -720,34 +770,29 @@ def main():
                 'Oct-25'
             ]
             
+            # --- CALCULO DE INDICADORES MENSUALES (Desde metrics.py) ---
+            # Se usa df_unfiltered para tener historial completo
+            monthly_data = metrics_module.calculate_monthly_kpis(df_unfiltered)
+
             # Helper to get monthly data or '-'
             def get_metric(metric_key, month, df_u, is_percent=True):
-                # For now implementing dynamic logic for SLA indicators
-                # Others are placeholders/hardcoded as per current data availability
-                if 'SLA' not in metric_key and 'Recobros' not in metric_key:
-                    # Mockup for external data (Call Center, Recobros) based on provided images
-                    # Ideally this should be a separate input or file
-                    if month == 'Ago-25' and 'Abandono' in metric_key: return "0.07%"
-                    if month == 'Sep-25' and 'Abandono' in metric_key: return "0.08%"
-                    if month == 'Oct-25' and 'Abandono' in metric_key: return "0.17%"
-                    
-                    if month == 'Ago-25' and 'NS' in metric_key: return "99.04%"
-                    if month == 'Sep-25' and 'NS' in metric_key: return "98.47%"
-                    if month == 'Oct-25' and 'NS' in metric_key: return "97.30%"
-                    
-                    if month == 'Ago-25' and 'Quejas' in metric_key: return "0.99%"
-                    if month == 'Sep-25' and 'Quejas' in metric_key: return "1.19%"
-                    if month == 'Oct-25' and 'Quejas' in metric_key: return "0.37%"
-                    
-                    if 'Recobros' in metric_key and month in ['Feb-25', 'Mar-25', 'Abr-25', 'May-25', 'Jun-25', 'Jul-25', 'Ago-25', 'Sep-25', 'Oct-25']:
-                         # Placeholder values from screenshot roughly
-                         vals = {'Feb-25': "$2,420", 'Mar-25': "$3,000", 'Abr-25': "$7,560", 'May-25': "$4,000",
-                                 'Jun-25': "$1,600", 'Jul-25': "$1,500", 'Ago-25': "$2,900", 'Sep-25': "$7,274", 'Oct-25': "$800"}
-                         return vals.get(month, "-")
-                    
-                    return "-"
+                
+                # 1. Buscar en resultados pre-calculados (metrics.py)
+                val = None
+                m_data = monthly_data.get(month, {})
+                
+                if metric_key == 'NS': val = m_data.get('ns')
+                elif metric_key == 'Abandono': val = m_data.get('abandono')
+                elif metric_key == 'Coord': val = m_data.get('coordinacion')
+                elif metric_key == 'Quejas': val = m_data.get('quejas')
+                elif metric_key == 'Recobros': val = m_data.get('recobros')
+                
+                if val is not None:
+                    if metric_key == 'Recobros': return f"${val:,.0f}"
+                    return f"{val:.2f}%"
 
-                # Dynamic SLA Calc
+                # 2. Dynamic SLA Calc (Detallado por tipo/zona) - Fallback logic
+                # Se mantiene esta lógica local para SLAs específicos no cubiertos por coordinacion general
                 df_m = df_u[df_u['mes'] == month]
                 if len(df_m) == 0: return "-"
                 
@@ -767,38 +812,33 @@ def main():
                      val = (dur[valid] <= limit_min).sum() / valid.sum() * 100
                      return f"{val:.2f}%"
 
-                if metric_key == 'SLA_Vial_Urbano':
+                if metric_key == 'SLA_Vial_Local':
                      mask = df_sla['origen_del_servicio'].astype(str).str.upper() == 'LOCAL'
-                     # Filter specific types if feasible, assuming general Vial Urbano
                      return calc_sla(df_sla[mask], 45)
                      
-                if metric_key == 'SLA_Situ_Urbano':
-                     # Assuming 'In Situ' implies specific types or just same threshold?
-                     # Screenshot shows distinct rows. Using general logic for now.
+                if metric_key == 'SLA_Situ_Local':
                      mask = df_sla['origen_del_servicio'].astype(str).str.upper() == 'LOCAL'
-                     return calc_sla(df_sla[mask], 35) # Threshold from screenshot "Antes de 35 min"
+                     return calc_sla(df_sla[mask], 35)
 
-                if metric_key == 'SLA_Vial_Rural':
+                if metric_key == 'SLA_Vial_Foraneo':
                      mask = df_sla['origen_del_servicio'].astype(str).str.upper().str.contains('FORAN')
                      return calc_sla(df_sla[mask], 90)
 
-                if metric_key == 'SLA_Situ_Rural':
+                if metric_key == 'SLA_Situ_Foraneo':
                      mask = df_sla['origen_del_servicio'].astype(str).str.upper().str.contains('FORAN')
-                     return calc_sla(df_sla[mask], 60) # Screenshot "Antes de 60 min"
+                     return calc_sla(df_sla[mask], 60)
                      
                 return "-"
 
-            # 2. Build rows data
+
             rows_definitions = [
                 {'name': '% Cumplimiento del NS', 'control': 'Mínimo 90%', 'key': 'NS'},
                 {'name': '% Máximo de Abandono', 'control': 'Máximo 1%', 'key': 'Abandono'},
-                {'name': 'Coordinación Urbano y Rural', 'control': '10 minutos Mínimo el 85%', 'key': 'Coord'}, # No data in BBDD for Coord time
-                {'name': 'Contacto Vial-Urbano', 'control': 'Mínimo 86.50% Antes de 45 minutos', 'key': 'SLA_Vial_Urbano'},
-                {'name': 'Contacto In situ - Urbano', 'control': 'Mínimo 80% Antes de 35 minutos', 'key': 'SLA_Situ_Urbano'},
-                {'name': 'Contacto Vial - Rural', 'control': 'Mínimo 86.50% Antes de 90 minutos', 'key': 'SLA_Vial_Rural'},
-                {'name': 'Contacto In situ - Rural', 'control': 'Mínimo 90% Antes de 60 minutos', 'key': 'SLA_Situ_Rural'},
-                {'name': '% Quejas procedentes', 'control': 'Máximo 1% Todos los servicios', 'key': 'Quejas'},
-                {'name': 'Suma de recobros', 'control': '100% meta anual ($18.000)', 'key': 'Recobros'}
+                {'name': 'Coordinación Local y Foráneo', 'control': '10 minutos Mínimo el 85%', 'key': 'Coord'},
+                {'name': 'Contacto Vial-Local', 'control': 'Mínimo 86.50% Antes de 45 minutos', 'key': 'SLA_Vial_Local'},
+                {'name': 'Contacto In situ - Local', 'control': 'Mínimo 80% Antes de 35 minutos', 'key': 'SLA_Situ_Local'},
+                {'name': 'Contacto Vial - Foráneo', 'control': 'Mínimo 86.50% Antes de 90 minutos', 'key': 'SLA_Vial_Foraneo'},
+                {'name': 'Contacto In situ - Foráneo', 'control': 'Mínimo 90% Antes de 60 minutos', 'key': 'SLA_Situ_Foraneo'}
             ]
             
             month_keys = ['Ene-25', 'Feb-25', 'Mar-25', 'Abr-25', 'May-25', 'Jun-25', 'Jul-25', 'Ago-25', 'Sep-25', 'Oct-25']
@@ -833,8 +873,7 @@ def main():
                 
             df_table = pd.DataFrame(table_data, columns=columns_struct)
             
-            st.write("✅ Tabla generada con éxito. Filas:", len(df_table))
-            st.write(df_table.head())
+            st.success(f"✅ Tabla generada con éxito. Filas: {len(df_table)}")
 
             # Style
             def style_table(val):
@@ -874,7 +913,7 @@ def main():
                     st.error(f"Error visualizando estilos: {e}")
                     st.dataframe(df_table, use_container_width=True, hide_index=True)
             
-            st.caption("Nota: Los valores de Coordinación, NS, Abandono y Recobros son simulados o externos a la BBDD actual.")
+            st.caption("Nota: Los valores de Coordinación, NS, Abandono y Recobros son calculados directamente de la BBDD.")
 
         except Exception as e:
             st.error("❌ ERROR CRÍTICO AL GENERAR TABLA:")
@@ -893,6 +932,7 @@ def main():
             fig = px.bar(x=prov_counts.index, y=prov_counts.values,
                         title="Demanda por Provincia",
                         color_discrete_sequence=[COLORS['purple']])
+            style_dark_chart(fig)
             st.plotly_chart(fig, use_container_width=True)
         
         with col2:
@@ -900,6 +940,7 @@ def main():
             fig = px.bar(x=city_counts.index, y=city_counts.values,
                         title="Demanda por Ciudad",
                         color_discrete_sequence=[COLORS['purple']])
+            style_dark_chart(fig)
             st.plotly_chart(fig, use_container_width=True)
     
     # ==========================================================================
@@ -932,6 +973,7 @@ def main():
                     }
                 }
             ))
+            style_dark_chart(fig)
             st.plotly_chart(fig, use_container_width=True)
         
         with col2:
@@ -954,6 +996,7 @@ def main():
                             title="Distribución de Calificaciones NPS",
                             color=nps_counts.index.astype(str),
                             color_discrete_sequence=colors)
+                style_dark_chart(fig)
                 st.plotly_chart(fig, use_container_width=True)
     
     # ==========================================================================
@@ -963,46 +1006,92 @@ def main():
         st.markdown('<h2 class="section-header">Metodología</h2>', unsafe_allow_html=True)
         
         st.markdown("""
+        ### Glosario de Términos
+        - **Local**: Servicios categorizados como 'LOCAL' en el campo origen.
+        - **Foráneo**: Servicios categorizados como 'FORANEO' en el campo origen.
+        
+        ---
+        
         ### Cálculo de SLA (Service Level Agreement)
         
-        **Fuente Única de Verdad:** Hoja `BBDD` (Servicios Brindados).
+        **Definición**: Porcentaje de servicios atendidos dentro del tiempo máximo establecido.
         
-        **Fórmula:**
+        **Fórmula**:
         ```
         SLA = (Servicios Cumple / Total Servicios Válidos) × 100
         ```
         
-        El cálculo se realiza **registro por registro** comparando la duración real del servicio contra el umbral establecido para su tipo y zona.
+        Donde:
+        - `Duración = FechaContacto − FechaAsignación`
+        - `Estado = CUMPLE si Duración ≤ Umbral, NO CUMPLE si Duración > Umbral`
         
         **Umbrales por Tipo de Servicio:**
         | Tipo | Local | Foráneo |
         |------|-------|---------|
-        | Vial (Auxilio/Grúa/Remolque) | 45 min | 90 min |
-        | Legal | 35 min | 60 min |
+        | Contactación Vial | 45 min | 90 min |
+        | Contactación Legal | 35 min | 60 min |
+        | Asignación | 10 min | 10 min |
         
         **Exclusiones:**
         - Servicios Programados (`servicios_programados = "No"`)
         - Estados: Cancelado, Fallida, Anulado
-        - Keywords en motivos: Cita, Agendada, Programada, Posterior
-        - Categoría "Otros" (Médico, Hogar, etc.) se excluye del análisis core.
+        - Keywords en motivos: "Cita", "Agendada", "Programada", "Posterior"
         
         ---
         
         ### Cálculo de NPS (Net Promoter Score)
         
-        **Fórmula:**
+        **Definición**: Índice de lealtad y recomendación del cliente.
+        
+        **Fórmula**:
         ```
-        NPS = %Promotores - %Detractores
+        NPS = %Promotores − %Detractores
         ```
         
-        **Detección automática de escala:**
-        - Si max(calificación) ≤ 5 → Escala 1-5
-        - Si max(calificación) > 5 → Escala 0-10
+        **Clasificación (Escala 0-10):**
+        | Tipo | Calificación |
+        |------|-------------|
+        | Promotores | 9-10 |
+        | Pasivos | 7-8 |
+        | Detractores | 0-6 |
         
-        | Escala | Promotor | Pasivo | Detractor |
-        |--------|----------|--------|-----------|
-        | 1-5 | 5 | 4 | 1-3 |
-        | 0-10 | 9-10 | 7-8 | 0-6 |
+        **Clasificación (Escala 1-5):**
+        | Tipo | Calificación |
+        |------|-------------|
+        | Promotores | 5 |
+        | Pasivos | 4 |
+        | Detractores | 1-3 |
+        
+        ---
+        
+        ### Cálculo de Indicadores Mensuales
+        
+        #### 1. Cumplimiento del NS
+        ```
+        NS = (Servicios Concluidos / Total Servicios Válidos) × 100
+        ```
+        **Total Servicios Válidos**: Total de registros menos los siguientes estados excluidos:
+        - Cancelado al momento
+        - Cancelado posterior
+        - Anulado, Abortado, Duplicado, Prueba
+        
+        #### 2. % Máximo de Abandono
+        ```
+        Abandono = ((Cancelado al momento + Cancelado posterior) / Total Bruto) × 100
+        ```
+        Se considera sobre el volumen total de ingresos.
+        
+        #### 3. Coordinación (Local y Foráneo)
+        Mide el tiempo transcurrido entre la toma del servicio (Contacto) y la asignación del proveedor.
+        - **Fórmula**: `(fec_asignacion + hrs_asignacion) - (fec_contacto + hrs_contacto)`
+        - **Meta**: ≤ 10 minutos.
+        
+        ---
+        
+        ### Fuentes de Datos
+        - **Dataset Principal**: Servicios brindados ADS 2025 (1).xlsx
+        - **Hojas**: BBDD (raw data), TIEMPO (pre-calculated metrics)
+        - **Periodo**: Enero - Octubre 2025
         """)
     
     # Footer

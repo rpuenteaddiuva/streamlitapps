@@ -1,0 +1,77 @@
+
+--- SLA PROXY COLUMNS ---
+Columns: ['tiempo_contactacion', '┐como_califica_el_tiempo_de_llegada_del_proveedor?_-_tiempo', 'tiempo_asignacion', 'cumplimiento_asignacion\n(10min)', 'cumplimiento_local_-_vial\n(45min)', 'cumplimiento_foraneo_-_vial\n(90min)', 'cumplimiento_local_-_legal\n(35min)', 'cumplimiento_foraneo_-_legal\n(60min)']
+
+VALUES for tiempo_contactacion:
+tiempo_contactacion
+NaN         2773
+00:00:24      17
+00:00:20      16
+00:00:27      16
+00:00:21      16
+Name: count, dtype: int64
+
+VALUES for ┐como_califica_el_tiempo_de_llegada_del_proveedor?_-_tiempo:
+┐como_califica_el_tiempo_de_llegada_del_proveedor?_-_tiempo
+NaN    6556
+5.0    2918
+4.0     454
+3.0     113
+2.0      30
+Name: count, dtype: int64
+
+VALUES for tiempo_asignacion:
+tiempo_asignacion
+NaN         2609
+00:00:46      26
+00:02:11      23
+00:02:40      22
+00:02:31      22
+Name: count, dtype: int64
+
+VALUES for cumplimiento_asignacion
+(10min):
+cumplimiento_asignacion\n(10min)
+CUMPLE       5944
+NO CUMPLE    3548
+NaN           605
+Name: count, dtype: int64
+
+VALUES for cumplimiento_local_-_vial
+(45min):
+cumplimiento_local_-_vial\n(45min)
+NO CUMPLE    5308
+CUMPLE       3891
+NaN           898
+Name: count, dtype: int64
+
+VALUES for cumplimiento_foraneo_-_vial
+(90min):
+cumplimiento_foraneo_-_vial\n(90min)
+CUMPLE       5471
+NO CUMPLE    3728
+NaN           898
+Name: count, dtype: int64
+
+VALUES for cumplimiento_local_-_legal
+(35min):
+cumplimiento_local_-_legal\n(35min)
+NO CUMPLE    6124
+CUMPLE       3075
+NaN           898
+Name: count, dtype: int64
+
+VALUES for cumplimiento_foraneo_-_legal
+(60min):
+cumplimiento_foraneo_-_legal\n(60min)
+CUMPLE       4672
+NO CUMPLE    4527
+NaN           898
+Name: count, dtype: int64
+
+TIME ASIGNACION Stats:
+count         7488
+unique        2535
+top       00:00:46
+freq            26
+Name: tiempo_asignacion, dtype: object

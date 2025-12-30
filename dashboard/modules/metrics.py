@@ -115,3 +115,108 @@ def calculate_nps(df):
     det = (cats == 'DETRACTOR').sum() / len(cats)
     
     return (prom - det) * 100
+
+
+
+def calculate_monthly_kpis(df):
+    """
+    Calcula indicadores mensuales (NS, Abandono, Coordinación, Quejas, Recobros)
+    Devuelve un diccionario anidado.
+    """
+    results = {}
+    
+    if 'mes' not in df.columns:
+        return results
+        
+    # Exclusiones
+    INVALID_STATUSES = ['Cancelado al momento', 'Cancelado posterior', 'Anulado', 'Abortado', 'Duplicado', 'Prueba']
+    
+    def combine_date_time(date_val, time_val):
+        """Helper to combine date and time columns"""
+        try:
+            d = pd.to_datetime(date_val)
+            if pd.isna(d): return pd.NaT
+            
+            # Formatos de hora pueden variar (str vs datetime.time)
+            if pd.isna(time_val): return pd.NaT
+            
+            t_str = str(time_val).strip()
+            # Si ya es datetime.time
+            if hasattr(time_val, 'hour'):
+                t_str = time_val.strftime('%H:%M:%S')
+                
+            # Combinar string
+            dt_str = f"{d.strftime('%Y-%m-%d')} {t_str}"
+            return pd.to_datetime(dt_str, errors='coerce')
+        except:
+            return pd.NaT
+
+    # Agrupar por mes
+    for mes, group in df.groupby('mes'):
+        metrics = {}
+        total_bruto = len(group)
+        if total_bruto == 0: continue
+        
+        # Filtrar Validos (para NS y SLAs)
+        status_col = 'status_del_servicio'
+        if status_col in group.columns:
+            # Excluir status invalidos para el denominador de eficiencia
+            mask_valid = ~group[status_col].astype(str).isin(INVALID_STATUSES)
+            group_valid = group[mask_valid]
+            total_valid = len(group_valid)
+            
+            # 1. % Cumplimiento del NS (Concluidos / Total Valido)
+            concluidos = group_valid[group_valid[status_col].astype(str).str.contains('Concluido', case=False, na=False)].shape[0]
+            metrics['ns'] = (concluidos / total_valid * 100) if total_valid > 0 else 0
+            
+            # 2. % Máximo de Abandono (Cancelados / Total Válido)
+            # Se excluyen Anulado, Abortado, Duplicado, Prueba del denominador
+            mask_abandono = group_valid[status_col].astype(str).str.contains('Cancelado|Abandono', case=False, na=False)
+            abandonos = mask_abandono.sum()
+            metrics['abandono'] = (abandonos / total_valid * 100) if total_valid > 0 else 0
+        else:
+            metrics['ns'] = 0
+            metrics['abandono'] = 0
+            
+        # 3. Coordinación (Tiempo contacto - asignacion <= 10 min)
+        # Usa la lógica: Asignación ocurre primero, luego Contacto
+        # Diff = Contacto - Asignación (positivo = tiempo de espera)
+        cumple_coord = 0
+        valid_coord_count = 0
+        
+        if {'fec_contacto', 'hrs_contacto', 'fec_asignacion', 'hrs_asignacion'}.issubset(group.columns):
+            dt_contact = group.apply(lambda x: combine_date_time(x['fec_contacto'], x['hrs_contacto']), axis=1)
+            dt_assign = group.apply(lambda x: combine_date_time(x['fec_asignacion'], x['hrs_asignacion']), axis=1)
+            
+            # FIXED: Contact - Assign (tiempo de espera desde asignación hasta contacto)
+            diff_min = (dt_contact - dt_assign).dt.total_seconds() / 60
+            
+            # Filtrar solo no-nulos y no-negativos (negativos = error de datos)
+            valid_mask = diff_min.notna() & (diff_min >= 0)
+            valid_diffs = diff_min[valid_mask]
+            
+            if len(valid_diffs) > 0:
+                cumple_coord = (valid_diffs <= 10).sum()
+                valid_coord_count = len(valid_diffs)
+                metrics['coordinacion'] = (cumple_coord / valid_coord_count) * 100
+            else:
+                metrics['coordinacion'] = 0
+        else:
+            metrics['coordinacion'] = 0
+
+        # 4. % Quejas procedentes
+        quejas_count = 0
+        if 'es_queja' in group.columns:
+            quejas_count = group[group['es_queja'].astype(str).str.lower() == 'si'].shape[0]
+        elif 'tipo_de_servicio' in group.columns:
+            quejas_count = group[group['tipo_de_servicio'].astype(str).str.contains('Queja', case=False, na=False)].shape[0]
+            
+        metrics['quejas'] = (quejas_count / total_bruto) * 100
+        
+        # 5. Suma de recobros
+        # NO HAY DATOS DE COSTO. Se devuelve 0 explícitamente.
+        metrics['recobros'] = 0
+            
+        results[mes] = metrics
+        
+    return results

@@ -1,0 +1,81 @@
+
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{geometry}
+\usepackage{amsmath}
+\geometry{a4paper, margin=1in}
+
+\definecolor{addiuvaBlue}{HTML}{0050A0}
+\definecolor{addiuvaPink}{HTML}{E20074}
+
+\title{\textcolor{addiuvaBlue}{\textbf{Reporte Completo de Análisis de Datos ADS 2025}}}
+\author{Transformación Empresarial}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section{Introducción}
+Este reporte presenta el análisis detallado de los servicios brindados en el periodo 2025. El objetivo es evaluar el cumplimiento de los Acuerdos de Nivel de Servicio (SLA) y la satisfacción del cliente (NPS).
+
+\section{Fuentes de Información}
+\begin{itemize}
+    \item Dataset: \texttt{Servicios brindados ADS 2025 (1).xlsx}
+    \item Hoja procesada: \texttt{BBDD}
+\end{itemize}
+
+\section{Metodología}
+\subsection{Limpieza de Datos}
+Se estandarizaron los nombres de columnas a formato \texttt{snake\_case}. Se procesaron fechas y horas vectorialmente para calcular la duración del servicio.
+
+\subsection{Definiciones Conceptuales}
+\begin{description}
+    \item[SLA (Service Level Agreement)]: Tiempo máximo permitido entre la asignación y el contacto efectivo.
+    \item[NPS (Net Promoter Score)]: Medida de lealtad del cliente.
+\end{description}
+
+\section{Fórmulas}
+\subsection{Cálculo de SLA}
+$$ Duraci\acute{o}n = Fecha_{Contacto} - Fecha_{Asignaci\acute{o}n} $$
+$$ Estado = \begin{cases} 
+CUMPLE & \text{si } Duraci\acute{o}n \le Umbral \\
+NO CUMPLE & \text{si } Duraci\acute{o}n > Umbral 
+\end{cases} $$
+Umbrales: 45 min (Vial/Local), 90 min (Vial/Foráneo), 35 min (Legal/Local), 60 min (Legal/Foráneo).
+
+\subsection{Cálculo de NPS}
+$$ NPS = \% Promotores (9-10) - \% Detractores (0-6) $$
+
+\section{Resultados Visuales}
+
+\subsection{Cumplimiento SLA}
+\begin{center}
+    \includegraphics[width=0.7\textwidth]{../graficas/sla_pie.png}
+\end{center}
+
+\subsection{NPS Score}
+\begin{center}
+    \includegraphics[width=0.7\textwidth]{../graficas/nps_bar.png}
+\end{center}
+
+\subsection{Top Brokers}
+\begin{center}
+    \includegraphics[width=0.9\textwidth]{../graficas/top_brokers.png}
+\end{center}
+
+\section{Benchmarking con Boletín Oficial (Oct 2025)}
+Se realizó una validación cruzada con los datos del Boletín de Calidad.
+
+\begin{itemize}
+    \item \textbf{SLA Oficial (Octubre)}: 85.59\%
+    \item \textbf{SLA Calculado (Anual)}: 44.51\%
+    \item \textbf{Varianza}: La diferencia se atribuye a la ventana de tiempo (Anual vs Octubre) y a posibles exclusiones manuales de "Justificaciones" no presentes en la metadata del Excel.
+\end{itemize}
+
+\section{Conclusiones}
+El análisis revela oportunidades de mejora en la captura de tiempos (alta tasa de registros inválidos) y focalización en brokers con alto volumen pero bajo cumplimiento. Se recomienda auditar los casos con "Cancelado Posterior" para asegurar que no impacten los indicadores operativos reales.
+
+\end{document}

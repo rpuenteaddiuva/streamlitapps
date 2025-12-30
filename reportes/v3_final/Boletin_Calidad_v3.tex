@@ -1,0 +1,234 @@
+\documentclass[a4paper,11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[spanish]{babel}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{geometry}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{colortbl}
+\usepackage{multirow}
+\usepackage{fancyhdr}
+\usepackage{tikz}
+\usepackage{hyperref}
+
+\geometry{a4paper, margin=2cm, top=3cm, bottom=2.5cm}
+
+% Colores del boletín
+\definecolor{addiuvaBlue}{HTML}{0055A6}
+\definecolor{addiuvaLightBlue}{HTML}{4A90D9}
+\definecolor{addiuvaGreen}{HTML}{2E7D32}
+\definecolor{addiuvaPurple}{HTML}{6A1B9A}
+\definecolor{addiuvaYellow}{HTML}{FFC107}
+\definecolor{headerBlue}{HTML}{003366}
+
+% Header y Footer
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\textcolor{addiuvaBlue}{\textbf{OCTUBRE 2025}}}
+\fancyhead[R]{\textcolor{addiuvaBlue}{Boletín de Calidad ADS}}
+\fancyfoot[C]{\thepage}
+\fancyfoot[L]{\footnotesize Información confidencial. Propiedad de Asistencia Especializada del Ecuador.}
+\renewcommand{\headrulewidth}{2pt}
+\renewcommand{\headrule}{\hbox to\headwidth{\color{addiuvaBlue}\leaders\hrule height \headrulewidth\hfill}}
+
+\begin{document}
+
+% =============================================================================
+% PORTADA
+% =============================================================================
+\begin{titlepage}
+    \centering
+    \vspace*{2cm}
+    
+    {\Huge\bfseries\textcolor{addiuvaBlue}{Boletín de Calidad}}\\[0.5cm]
+    {\LARGE\textcolor{addiuvaLightBlue}{Asistencia Especializada del Sur}}\\[1cm]
+    
+    {\Large OCTUBRE 2025}\\[2cm]
+    
+    \includegraphics[width=0.5\textwidth]{graficas/sla_chart.png}\\[2cm]
+    
+    {\large\textbf{Métricas Principales}}\\[0.5cm]
+    \begin{tabular}{|c|c|c|}
+        \hline
+        \rowcolor{addiuvaBlue}\textcolor{white}{\textbf{Métrica}} & \textcolor{white}{\textbf{Valor}} & \textcolor{white}{\textbf{Meta}} \\
+        \hline
+        SLA Contactación Vial & 82.71\% & 86.50\% \\
+        \hline
+        NPS & 81.78\% & 82.14\% \\
+        \hline
+        Servicios Concluidos & 6,861 & - \\
+        \hline
+    \end{tabular}
+    
+    \vfill
+    {\small Generado automáticamente por Sistema de Análisis ADS}
+\end{titlepage}
+
+% =============================================================================
+% SECCIÓN 1: HISTÓRICO COORDINACIÓN
+% =============================================================================
+\section*{\textcolor{addiuvaBlue}{1. Histórico de Coordinación}}
+
+\begin{center}
+    \includegraphics[width=\textwidth]{graficas/historico_coordinacion.png}
+\end{center}
+
+\subsection*{Resumen Ejecutivo}
+\begin{itemize}
+    \item \textbf{Servicios Concluidos 2025}: 6,861
+    \item \textbf{Cancelados al Momento}: Representa servicios cancelados antes de la asignación de proveedor.
+    \item \textbf{Cancelados Posterior}: Servicios cancelados después de la asignación.
+    \item \textbf{En Proceso}: Servicios actualmente en gestión.
+\end{itemize}
+
+\newpage
+
+% =============================================================================
+% SECCIÓN 2: DISTRIBUCIÓN DE SERVICIOS
+% =============================================================================
+\section*{\textcolor{addiuvaBlue}{2. Distribución de Servicios}}
+
+\subsection*{Origen: Local vs Foráneo}
+\begin{center}
+    \includegraphics[width=0.5\textwidth]{graficas/origen_distribucion.png}
+\end{center}
+
+\subsection*{Líneas de Servicio}
+\begin{center}
+    \includegraphics[width=\textwidth]{graficas/tipo_servicio.png}
+\end{center}
+
+\newpage
+
+% =============================================================================
+% SECCIÓN 3: DEMANDA GEOGRÁFICA
+% =============================================================================
+\section*{\textcolor{addiuvaPurple}{3. Demanda Geográfica}}
+
+\begin{center}
+    \includegraphics[width=\textwidth]{graficas/demanda_geografica.png}
+\end{center}
+
+\subsection*{Observaciones}
+\begin{itemize}
+    \item \textbf{Pichincha} concentra la mayor demanda (48\%).
+    \item \textbf{Quito} es la ciudad con más servicios solicitados.
+    \item La distribución refleja la concentración poblacional del país.
+\end{itemize}
+
+\newpage
+
+% =============================================================================
+% SECCIÓN 4: SATISFACCIÓN DEL CLIENTE
+% =============================================================================
+\section*{\textcolor{addiuvaGreen}{4. Satisfacción del Cliente}}
+
+\begin{center}
+    \includegraphics[width=\textwidth]{graficas/satisfaccion_charts.png}
+\end{center}
+
+\subsection*{Métricas de Satisfacción}
+\begin{tabular}{|l|c|c|}
+    \hline
+    \rowcolor{addiuvaGreen}\textcolor{white}{\textbf{Indicador}} & \textcolor{white}{\textbf{Valor}} & \textcolor{white}{\textbf{Meta}} \\
+    \hline
+    Contactabilidad & 69.27\% & 70\% \\
+    \hline
+    Índice de Satisfacción & 95.67\% & 90\% \\
+    \hline
+    NPS (Net Promoter Score) & 81.78\% & 82.14\% \\
+    \hline
+\end{tabular}
+
+\newpage
+
+% =============================================================================
+% SECCIÓN 5: INDICADORES MENSUALES
+% =============================================================================
+\section*{\textcolor{addiuvaYellow}{5. Tabla de Indicadores}}
+
+\footnotesize
+\begin{tabular}{|l|l|c|c|c|c|c|}
+    \hline
+    \rowcolor{headerBlue}\textcolor{white}{\textbf{Indicador}} & \textcolor{white}{\textbf{Punto de Control}} & \textcolor{white}{\textbf{Ago-25}} & \textcolor{white}{\textbf{Sep-25}} & \textcolor{white}{\textbf{Oct-25}} & \textcolor{white}{\textbf{Prom. Trim.}} \\
+    \hline
+    \% Cumplimiento NS & Mínimo 90\% & 99.04\% & 98.47\% & 97.30\% & 98.27\% \\
+    \hline
+    \% Máx. Abandono & Máximo 1\% & 0.07\% & 0.08\% & 0.17\% & 0.11\% \\
+    \hline
+    Coordinación & Mínimo 85\% / 10 min & 85.04\% & 85.27\% & 86.38\% & 85.56\% \\
+    \hline
+    Contacto Vial-Urbano & Mínimo 86.50\% / 45 min & 87.14\% & 86.57\% & 86.86\% & 86.86\% \\
+    \hline
+    Contacto Vial-Rural & Mínimo 86.50\% / 90 min & 89.81\% & 86.87\% & 87.19\% & 87.96\% \\
+    \hline
+    \% Quejas & Máximo 1\% & 0.99\% & 1.19\% & 0.37\% & 0.85\% \\
+    \hline
+\end{tabular}
+\normalsize
+
+\newpage
+
+% =============================================================================
+% SECCIÓN 6: METODOLOGÍA
+% =============================================================================
+\section*{\textcolor{addiuvaBlue}{6. Metodología}}
+
+\subsection*{6.1 Cálculo de SLA (Service Level Agreement)}
+
+\textbf{Definición}: Porcentaje de servicios atendidos dentro del tiempo máximo establecido.
+
+\textbf{Fórmula}:
+$$ SLA = \frac{\text{Servicios Cumple}}{\text{Total Servicios Válidos}} \times 100 $$
+
+\textbf{Umbrales por Tipo de Servicio}:
+\begin{itemize}
+    \item Contactación Vial Local: 45 minutos
+    \item Contactación Vial Foráneo: 90 minutos
+    \item Contactación Legal Local: 35 minutos
+    \item Contactación Legal Foráneo: 60 minutos
+    \item Asignación: 10 minutos
+\end{itemize}
+
+\textbf{Exclusiones}:
+\begin{itemize}
+    \item Servicios Programados (\texttt{servicios\_programados = "No"})
+    \item Estados: Cancelado, Fallida, Anulado
+    \item Keywords en motivos: "Cita", "Agendada", "Programada", "Posterior"
+\end{itemize}
+
+\subsection*{6.2 Cálculo de NPS (Net Promoter Score)}
+
+\textbf{Definición}: Índice de lealtad y recomendación del cliente.
+
+\textbf{Fórmula}:
+$$ NPS = \%Promotores - \%Detractores $$
+
+\textbf{Clasificación (Escala 0-10)}:
+\begin{itemize}
+    \item \textbf{Promotores}: Calificación = 10
+    \item \textbf{Pasivos}: Calificación 7-9
+    \item \textbf{Detractores}: Calificación 0-6
+\end{itemize}
+
+\textbf{Clasificación (Escala 1-5)}:
+\begin{itemize}
+    \item \textbf{Promotores}: Calificación = 5
+    \item \textbf{Pasivos}: Calificación = 4
+    \item \textbf{Detractores}: Calificación 1-3
+\end{itemize}
+
+\subsection*{6.3 Fuentes de Datos}
+\begin{itemize}
+    \item \textbf{Dataset Principal}: \texttt{Servicios brindados ADS 2025 (1).xlsx}
+    \item \textbf{Hojas}: BBDD (raw data), TIEMPO (pre-calculated metrics)
+    \item \textbf{Periodo}: Enero - Octubre 2025
+\end{itemize}
+
+\vfill
+\begin{center}
+    \textcolor{gray}{\footnotesize Documento generado: \today}
+\end{center}
+
+\end{document}

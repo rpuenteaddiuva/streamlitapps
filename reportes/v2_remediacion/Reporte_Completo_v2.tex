@@ -1,0 +1,78 @@
+
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{geometry}
+\usepackage{amsmath}
+\geometry{a4paper, margin=1in}
+
+\definecolor{addiuvaBlue}{HTML}{0050A0}
+\definecolor{addiuvaPink}{HTML}{E20074}
+
+\title{\textcolor{addiuvaBlue}{\textbf{Reporte Completo de Análisis de Datos ADS 2025 - V2}}}
+\author{Transformación Empresarial}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section{Introducción}
+Este reporte presenta el análisis detallado de los servicios brindados en el periodo 2025, atendiendo a las observaciones de la auditoría de calidad.
+
+\section{Fuentes de Información}
+\begin{itemize}
+    \item Dataset: \texttt{Servicios brindados ADS 2025 (1).xlsx}
+    \item Procesamiento: Limpieza y estandarización en memoria. Exclusión de registros cancelados.
+\end{itemize}
+
+\section{Metodología}
+\subsection{Limpieza de Datos}
+Se estandarizaron nombres y se filtraron explícitamente los casos con estado "Cancelado" o "Fallida" para no penalizar falsamente el SLA.
+
+\subsection{Definiciones Conceptuales}
+\begin{description}
+    \item[SLA (Service Level Agreement)]: Tiempo máximo permitido. Excluye cancelaciones.
+    \item[NPS (Net Promoter Score)]: Calculado sobre el total de encuestas respondidas (incluyendo Pasivos).
+\end{description}
+
+\section{Fórmulas}
+\subsection{Cálculo de SLA}
+$$ Cumplimiento \% = \frac{CUMPLE}{CUMPLE + NO\_CUMPLE} \times 100 $$
+(Excluyendo Cancelados e Inválidos)
+
+\subsection{Cálculo de NPS}
+$$ NPS = \% Promotores - \% Detractores $$
+(Base: Total de Encuestados)
+
+\section{Resultados Visuales}
+
+\subsection{Cumplimiento SLA}
+\begin{center}
+    \includegraphics[width=0.7\textwidth]{graficas/sla_pie.png}
+\end{center}
+
+\subsection{NPS Score}
+\begin{center}
+    \includegraphics[width=0.7\textwidth]{graficas/nps_bar.png}
+\end{center}
+
+\subsection{Top Brokers}
+\begin{center}
+    \includegraphics[width=0.9\textwidth]{graficas/top_brokers.png}
+\end{center}
+
+\section{Benchmarking con Boletín Oficial (Oct 2025)}
+Se realizó una validación cruzada con los datos del Boletín de Calidad.
+
+\begin{itemize}
+    \item \textbf{SLA Oficial (Octubre)}: 85.59\%
+    \item \textbf{SLA Calculado (Validado)}: 78.68\%
+    \item \textbf{Nota Temporal}: El reporte oficial cubre hasta Octubre 2025. Los resultados presentados incluyen datos preliminares de Noviembre y Diciembre 2025.
+\end{itemize}
+
+\section{Conclusiones}
+La nueva metodología de filtrado alinea los resultados con los estándares operativos, mostrando un desempeño real depurado de cancelaciones.
+
+\end{document}
