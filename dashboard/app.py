@@ -505,17 +505,17 @@ def main():
     
     # 4. Exclusiones SLA (Global - Aplica a todas las secciones)
     with st.sidebar.expander("📋 Exclusiones SLA", expanded=False):
-        st.caption("Controla qué registros se excluyen del cálculo de SLA.")
+        st.caption("Exclusiones activas por defecto (metodología oficial). Desmarca para ver SLA 'real'.")
         
         st.markdown("**📌 Por Estado/Tipo:**")
-        exc_programados = st.checkbox("Servicios Programados", value=False, key="exc_prog_sidebar", help="Excluir servicios_programados = 'Sí'")
-        exc_cancelados = st.checkbox("Estados Cancelados/Fallidos", value=False, key="exc_cancel_sidebar", help="Excluir Cancelado, Fallida, Anulado")
+        exc_programados = st.checkbox("Servicios Programados", value=True, key="exc_prog_sidebar", help="Excluir servicios_programados = 'Sí'")
+        exc_cancelados = st.checkbox("Estados Cancelados/Fallidos", value=True, key="exc_cancel_sidebar", help="Excluir Cancelado, Fallida, Anulado")
         
         st.markdown("**🔤 Por Keywords en Motivo:**")
-        exc_cita = st.checkbox("'Cita'", value=False, key="exc_cita_sidebar")
-        exc_agendada = st.checkbox("'Agendada'", value=False, key="exc_agendada_sidebar")
-        exc_programada = st.checkbox("'Programada'", value=False, key="exc_programada_sidebar")
-        exc_posterior = st.checkbox("'Posterior'", value=False, key="exc_posterior_sidebar")
+        exc_cita = st.checkbox("'Cita'", value=True, key="exc_cita_sidebar")
+        exc_agendada = st.checkbox("'Agendada'", value=True, key="exc_agendada_sidebar")
+        exc_programada = st.checkbox("'Programada'", value=True, key="exc_programada_sidebar")
+        exc_posterior = st.checkbox("'Posterior'", value=True, key="exc_posterior_sidebar")
         
         # Resumen
         active_exc = []
@@ -526,10 +526,12 @@ def main():
         if exc_programada: active_exc.append("Progr")
         if exc_posterior: active_exc.append("Post")
         
-        if active_exc:
-            st.success(f"✅ Activas: {', '.join(active_exc)}")
+        if len(active_exc) == 6:
+            st.success("✅ Metodología oficial (todas las exclusiones)")
+        elif active_exc:
+            st.warning(f"⚠️ Parcial: {', '.join(active_exc)}")
         else:
-            st.info("SLA sin exclusiones (real)")
+            st.error("🔴 SLA REAL - Sin exclusiones")
 
     # --- CAPTURE HISTORY (Context filtered, but ALL months) ---
     df_unfiltered = df.copy()
@@ -555,6 +557,40 @@ def main():
     if "Resumen" in selected_section:
         st.markdown('<h2 class="section-header">Resumen Ejecutivo</h2>', unsafe_allow_html=True)
         
+        # Calcular SLA dinámico según exclusiones del sidebar
+        df_sla_calc = df.copy()
+        mask_sla = df_sla_calc['status_del_servicio'].str.contains('Concluido', case=False, na=False)
+        
+        # Aplicar exclusiones según checkboxes
+        if exc_programados:
+            prog_col = next((c for c in df_sla_calc.columns if 'programad' in c.lower()), None)
+            if prog_col:
+                mask_sla = mask_sla & (df_sla_calc[prog_col].astype(str).str.lower() != 'si')
+        
+        motivo_col = next((c for c in df_sla_calc.columns if 'motivo' in c.lower()), None)
+        if motivo_col:
+            motivo_vals = df_sla_calc[motivo_col].astype(str).str.lower()
+            if exc_cita:
+                mask_sla = mask_sla & ~motivo_vals.str.contains('cita', case=False, na=False)
+            if exc_agendada:
+                mask_sla = mask_sla & ~motivo_vals.str.contains('agendada', case=False, na=False)
+            if exc_programada:
+                mask_sla = mask_sla & ~motivo_vals.str.contains('programada', case=False, na=False)
+            if exc_posterior:
+                mask_sla = mask_sla & ~motivo_vals.str.contains('posterior', case=False, na=False)
+        
+        df_sla_filtered = df_sla_calc[mask_sla]
+        
+        # Calcular SLA
+        if len(df_sla_filtered) > 0 and 'duracion_minutos' in df_sla_filtered.columns:
+            dur = pd.to_numeric(df_sla_filtered['duracion_minutos'], errors='coerce')
+            origen = df_sla_filtered['origen_del_servicio'].str.upper()
+            limite = origen.apply(lambda x: 90 if 'FORAN' in str(x) else 45)
+            cumple = (dur <= limite) & dur.notnull()
+            val_sla = cumple.mean() * 100 if cumple.any() else 0
+        else:
+            val_sla = 0
+        
         col1, col2, col3, col4 = st.columns(4)
         
         with col1:
@@ -563,9 +599,8 @@ def main():
             st.metric("✅ Concluidos", f"{metrics['concluidos']:,}")
         with col3:
             target_sla = 86.5
-            val_sla = metrics['sla']
             delta_sla = val_sla - target_sla
-            st.metric(f"⏱️ SLA (Meta {target_sla}%)", f"{val_sla:.1f}%", delta=f"{delta_sla:.1f}%", help="Calculado desde BBDD")
+            st.metric(f"⏱️ SLA (Meta {target_sla}%)", f"{val_sla:.1f}%", delta=f"{delta_sla:.1f}%", help="Calculado según exclusiones activas")
         with col4:
             target_nps = 82.1
             val_nps = metrics['nps']
