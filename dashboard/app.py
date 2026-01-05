@@ -502,6 +502,34 @@ def main():
             st.sidebar.warning(f"⚠️ Se han excluido {count_excluded} servicios del análisis.")
     else:
         st.sidebar.success("✅ Se están mostrando TODOS los servicios.")
+    
+    # 4. Exclusiones SLA (Global - Aplica a todas las secciones)
+    with st.sidebar.expander("📋 Exclusiones SLA", expanded=False):
+        st.caption("Controla qué registros se excluyen del cálculo de SLA.")
+        
+        st.markdown("**📌 Por Estado/Tipo:**")
+        exc_programados = st.checkbox("Servicios Programados", value=False, key="exc_prog_sidebar", help="Excluir servicios_programados = 'Sí'")
+        exc_cancelados = st.checkbox("Estados Cancelados/Fallidos", value=False, key="exc_cancel_sidebar", help="Excluir Cancelado, Fallida, Anulado")
+        
+        st.markdown("**🔤 Por Keywords en Motivo:**")
+        exc_cita = st.checkbox("'Cita'", value=False, key="exc_cita_sidebar")
+        exc_agendada = st.checkbox("'Agendada'", value=False, key="exc_agendada_sidebar")
+        exc_programada = st.checkbox("'Programada'", value=False, key="exc_programada_sidebar")
+        exc_posterior = st.checkbox("'Posterior'", value=False, key="exc_posterior_sidebar")
+        
+        # Resumen
+        active_exc = []
+        if exc_programados: active_exc.append("Prog")
+        if exc_cancelados: active_exc.append("Cancel")
+        if exc_cita: active_exc.append("Cita")
+        if exc_agendada: active_exc.append("Agend")
+        if exc_programada: active_exc.append("Progr")
+        if exc_posterior: active_exc.append("Post")
+        
+        if active_exc:
+            st.success(f"✅ Activas: {', '.join(active_exc)}")
+        else:
+            st.info("SLA sin exclusiones (real)")
 
     # --- CAPTURE HISTORY (Context filtered, but ALL months) ---
     df_unfiltered = df.copy()
@@ -579,10 +607,32 @@ def main():
         df_cat = df.copy()
         df_cat['categoria'] = df_cat['tipo_de_servicio'].apply(categorize_service)
         
+        # Aplicar exclusiones SLA según checkboxes del sidebar
+        mask_base = df_cat['status_del_servicio'].str.contains('Concluido', case=False, na=False)
+        
+        # Exclusión: Servicios programados
+        if exc_programados:
+            prog_col = next((c for c in df_cat.columns if 'programad' in c.lower()), None)
+            if prog_col:
+                mask_base = mask_base & (df_cat[prog_col].astype(str).str.lower() != 'si')
+        
+        # Exclusión: Keywords en motivo
+        motivo_col = next((c for c in df_cat.columns if 'motivo' in c.lower()), None)
+        if motivo_col:
+            motivo_vals = df_cat[motivo_col].astype(str).str.lower()
+            if exc_cita:
+                mask_base = mask_base & ~motivo_vals.str.contains('cita', case=False, na=False)
+            if exc_agendada:
+                mask_base = mask_base & ~motivo_vals.str.contains('agendada', case=False, na=False)
+            if exc_programada:
+                mask_base = mask_base & ~motivo_vals.str.contains('programada', case=False, na=False)
+            if exc_posterior:
+                mask_base = mask_base & ~motivo_vals.str.contains('posterior', case=False, na=False)
+        
         # Calculate SLA per category
         sla_by_cat = []
         for cat in ['Auxilio Vial', 'Grúas (Remolque)', 'Legal / In Situ', 'Otros']:
-            mask = (df_cat['categoria'] == cat) & (df_cat['status_del_servicio'].str.contains('Concluido', case=False, na=False))
+            mask = (df_cat['categoria'] == cat) & mask_base
             sub = df_cat[mask]
             if len(sub) > 0 and 'duracion_minutos' in sub.columns:
                 dur = sub['duracion_minutos']
@@ -741,39 +791,8 @@ def main():
     elif "Indicadores" in selected_section:
         st.markdown('<h2 class="section-header">Indicadores Mensuales</h2>', unsafe_allow_html=True)
         
-        # Expander para gestionar exclusiones SLA granularmente
-        with st.expander("📋 Gestión de Exclusiones SLA", expanded=True):
-            st.caption("Selecciona qué exclusiones aplicar al cálculo de SLA. Sin exclusiones = resultado 'real'.")
-            
-            col_exc1, col_exc2 = st.columns(2)
-            
-            with col_exc1:
-                st.markdown("**� Por Estado/Tipo:**")
-                exc_programados = st.checkbox("Servicios Programados", value=False, help="Excluir servicios donde servicios_programados = 'Sí'")
-                exc_cancelados = st.checkbox("Estados Cancelados/Fallidos", value=False, help="Excluir Cancelado, Fallida, Anulado")
-            
-            with col_exc2:
-                st.markdown("**🔤 Por Keywords en Motivo:**")
-                exc_cita = st.checkbox("'Cita'", value=False)
-                exc_agendada = st.checkbox("'Agendada'", value=False)
-                exc_programada = st.checkbox("'Programada'", value=False)
-                exc_posterior = st.checkbox("'Posterior'", value=False)
-            
-            # Resumen de exclusiones activas
-            active_exclusions = []
-            if exc_programados: active_exclusions.append("Programados")
-            if exc_cancelados: active_exclusions.append("Cancelados/Fallidos")
-            if exc_cita: active_exclusions.append("Cita")
-            if exc_agendada: active_exclusions.append("Agendada")
-            if exc_programada: active_exclusions.append("Programada")
-            if exc_posterior: active_exclusions.append("Posterior")
-            
-            if active_exclusions:
-                st.success(f"✅ Exclusiones activas: {', '.join(active_exclusions)}")
-            else:
-                st.warning("⚠️ Sin exclusiones - SLA 'real' sin ajustes")
-        
-        st.divider()
+        # Nota sobre las exclusiones (referencia al sidebar)
+        st.info("💡 **Tip:** Usa el control **📋 Exclusiones SLA** en el panel lateral para ajustar qué registros se excluyen del cálculo.")
         
         try:
             # 1. Prepare Columns Structure (Months + Quarterly Avgs + Total)
