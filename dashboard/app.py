@@ -741,6 +741,40 @@ def main():
     elif "Indicadores" in selected_section:
         st.markdown('<h2 class="section-header">Indicadores Mensuales</h2>', unsafe_allow_html=True)
         
+        # Expander para gestionar exclusiones SLA granularmente
+        with st.expander("📋 Gestión de Exclusiones SLA", expanded=True):
+            st.caption("Selecciona qué exclusiones aplicar al cálculo de SLA. Sin exclusiones = resultado 'real'.")
+            
+            col_exc1, col_exc2 = st.columns(2)
+            
+            with col_exc1:
+                st.markdown("**� Por Estado/Tipo:**")
+                exc_programados = st.checkbox("Servicios Programados", value=False, help="Excluir servicios donde servicios_programados = 'Sí'")
+                exc_cancelados = st.checkbox("Estados Cancelados/Fallidos", value=False, help="Excluir Cancelado, Fallida, Anulado")
+            
+            with col_exc2:
+                st.markdown("**🔤 Por Keywords en Motivo:**")
+                exc_cita = st.checkbox("'Cita'", value=False)
+                exc_agendada = st.checkbox("'Agendada'", value=False)
+                exc_programada = st.checkbox("'Programada'", value=False)
+                exc_posterior = st.checkbox("'Posterior'", value=False)
+            
+            # Resumen de exclusiones activas
+            active_exclusions = []
+            if exc_programados: active_exclusions.append("Programados")
+            if exc_cancelados: active_exclusions.append("Cancelados/Fallidos")
+            if exc_cita: active_exclusions.append("Cita")
+            if exc_agendada: active_exclusions.append("Agendada")
+            if exc_programada: active_exclusions.append("Programada")
+            if exc_posterior: active_exclusions.append("Posterior")
+            
+            if active_exclusions:
+                st.success(f"✅ Exclusiones activas: {', '.join(active_exclusions)}")
+            else:
+                st.warning("⚠️ Sin exclusiones - SLA 'real' sin ajustes")
+        
+        st.divider()
+        
         try:
             # 1. Prepare Columns Structure (Months + Quarterly Avgs + Total)
             columns_struct = [
@@ -754,7 +788,7 @@ def main():
             # --- CALCULO DE INDICADORES MENSUALES (Desde metrics.py) ---
             # Se usa df_unfiltered para tener historial completo
             monthly_data = metrics_module.calculate_monthly_kpis(df_unfiltered)
-
+            
             # Helper to get monthly data or '-'
             def get_metric(metric_key, month, df_u, is_percent=True):
                 
@@ -777,14 +811,37 @@ def main():
                 df_m = df_u[df_u['mes'] == month]
                 if len(df_m) == 0: return "-"
                 
-                # Common filters
+                # Common filters - Servicios concluidos
                 mask_conc = df_m['status_del_servicio'].astype(str).str.contains('Concluido', case=False, na=False)
-                prog_col = next((c for c in df_m.columns if 'programad' in c.lower()), None)
-                mask_no_prog = True
-                if prog_col:
-                     mask_no_prog = df_m[prog_col].astype(str).str.lower() != 'si'
                 
-                df_sla = df_m[mask_conc & mask_no_prog]
+                # Iniciar con máscara base
+                mask_final = mask_conc.copy()
+                
+                # Aplicar exclusiones granulares según checkboxes seleccionados
+                # 1. Excluir servicios programados
+                if exc_programados:
+                    prog_col = next((c for c in df_m.columns if 'programad' in c.lower()), None)
+                    if prog_col:
+                        mask_final = mask_final & (df_m[prog_col].astype(str).str.lower() != 'si')
+                
+                # 2. Excluir estados cancelados/fallidos (nota: ya filtrados por Concluido, pero por seguridad)
+                if exc_cancelados:
+                    mask_final = mask_final & ~df_m['status_del_servicio'].astype(str).str.contains('Cancelado|Fallid|Anulado', case=False, na=False)
+                
+                # 3. Excluir por keywords en motivo (granular)
+                motivo_col = next((c for c in df_m.columns if 'motivo' in c.lower()), None)
+                if motivo_col:
+                    motivo_vals = df_m[motivo_col].astype(str).str.lower()
+                    if exc_cita:
+                        mask_final = mask_final & ~motivo_vals.str.contains('cita', case=False, na=False)
+                    if exc_agendada:
+                        mask_final = mask_final & ~motivo_vals.str.contains('agendada', case=False, na=False)
+                    if exc_programada:
+                        mask_final = mask_final & ~motivo_vals.str.contains('programada', case=False, na=False)
+                    if exc_posterior:
+                        mask_final = mask_final & ~motivo_vals.str.contains('posterior', case=False, na=False)
+                
+                df_sla = df_m[mask_final]
                 
                 def calc_sla(sub_df, limit_min):
                      dur = pd.to_numeric(sub_df['duracion_minutos'], errors='coerce')
