@@ -681,6 +681,86 @@ def main():
                 sla_by_cat.append({'Categoría': cat, 'Volumen': len(sub), 'SLA': 'N/A', 'Estado': '⚪'})
         
         st.dataframe(pd.DataFrame(sla_by_cat), use_container_width=True, hide_index=True)
+        
+        # ============ NEW: SLA POR CIUDAD (Interactive) ============
+        st.divider()
+        st.subheader("📊 SLA por Ciudad")
+        
+        # Get unique service types and cities (use original tipo_de_servicio, not grouped categoria)
+        tipos_disponibles = ['Todos'] + sorted(df['tipo_de_servicio'].dropna().astype(str).unique().tolist())
+        ciudades_disponibles = ['Todas'] + sorted(df['ciudad'].dropna().astype(str).unique().tolist())[:50]  # Limitar a 50 ciudades
+        
+        # Dropdowns for filtering
+        col_filter1, col_filter2 = st.columns(2)
+        with col_filter1:
+            tipo_sel = st.selectbox("Tipo de Servicio:", tipos_disponibles, key="sla_city_tipo")
+        with col_filter2:
+            ciudad_sel = st.selectbox("Ciudad (para detalle):", ciudades_disponibles, key="sla_city_ciudad")
+        
+        # Filter data based on selection
+        df_city_analysis = df_cat[mask_base].copy()
+        
+        if tipo_sel != 'Todos':
+            df_city_analysis = df_city_analysis[df_city_analysis['tipo_de_servicio'].astype(str) == tipo_sel]
+        
+        # If specific city selected, filter to that city
+        if ciudad_sel != 'Todas':
+            df_city_analysis = df_city_analysis[df_city_analysis['ciudad'].astype(str) == ciudad_sel]
+        
+        # Calculate SLA per city
+        sla_by_city = []
+        cities_to_show = df_city_analysis['ciudad'].dropna().astype(str).unique()[:20]  # Top 20 cities
+        
+        for city in cities_to_show:
+            sub = df_city_analysis[df_city_analysis['ciudad'].astype(str) == city]
+            if len(sub) > 0 and 'duracion_minutos' in sub.columns:
+                dur = pd.to_numeric(sub['duracion_minutos'], errors='coerce')
+                origen = sub['origen_del_servicio'].str.upper()
+                limite = origen.apply(lambda x: 90 if 'FORAN' in str(x) else 45)
+                cumple = (dur <= limite) & dur.notnull()
+                sla_pct = cumple.mean() * 100 if cumple.any() else 0
+                sla_by_city.append({'Ciudad': city, 'Volumen': len(sub), 'SLA': sla_pct})
+        
+        if sla_by_city:
+            df_city_sla = pd.DataFrame(sla_by_city).sort_values('SLA', ascending=True)
+            
+            # If single city selected, show as metric card
+            if ciudad_sel != 'Todas' and len(sla_by_city) == 1:
+                city_info = sla_by_city[0]
+                col_m1, col_m2, col_m3 = st.columns(3)
+                with col_m1:
+                    st.metric("📍 Ciudad", city_info['Ciudad'])
+                with col_m2:
+                    st.metric("📊 Volumen", f"{city_info['Volumen']:,}")
+                with col_m3:
+                    sla_val = city_info['SLA']
+                    delta = sla_val - 86.5  # vs target
+                    st.metric("⏱️ SLA", f"{sla_val:.1f}%", delta=f"{delta:.1f}% vs meta")
+            else:
+                # Horizontal bar chart for multiple cities
+                fig_city = px.bar(
+                    df_city_sla,
+                    y='Ciudad',
+                    x='SLA',
+                    orientation='h',
+                    title=f"SLA por Ciudad - {tipo_sel}",
+                    text=df_city_sla['SLA'].apply(lambda x: f"{x:.1f}%"),
+                    color='SLA',
+                    color_continuous_scale=['#e74c3c', '#f39c12', '#2ecc71'],
+                    range_color=[60, 100]
+                )
+                fig_city.update_traces(textposition='outside')
+                fig_city.update_layout(
+                    yaxis={'categoryorder': 'total ascending'},
+                    xaxis_title="SLA (%)",
+                    yaxis_title="",
+                    showlegend=False,
+                    coloraxis_showscale=False
+                )
+                style_dark_chart(fig_city)
+                st.plotly_chart(fig_city, use_container_width=True)
+        else:
+            st.warning("No hay datos suficientes para calcular SLA en esta selección.")
     
     # ==========================================================================
     # HISTÓRICO COORDINACIÓN
