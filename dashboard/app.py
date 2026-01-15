@@ -688,7 +688,7 @@ def main():
         
         # Get unique service types and cities (use original tipo_de_servicio, not grouped categoria)
         tipos_disponibles = ['Todos'] + sorted(df['tipo_de_servicio'].dropna().astype(str).unique().tolist())
-        ciudades_disponibles = ['Todas'] + sorted(df['ciudad'].dropna().astype(str).unique().tolist())[:50]  # Limitar a 50 ciudades
+        ciudades_disponibles = ['Todas'] + sorted(df['ciudad'].dropna().astype(str).unique().tolist())  # All cities
         
         # Dropdowns for filtering
         col_filter1, col_filter2 = st.columns(2)
